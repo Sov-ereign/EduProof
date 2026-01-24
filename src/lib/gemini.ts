@@ -75,7 +75,7 @@ async function callOpenRouter(model: string, messages: Array<{ role: string; con
             model,
             messages,
             max_tokens: maxTokens,
-            temperature: 0.7,
+            temperature: 0.5, // Lower temperature for faster, more deterministic responses
         }),
     });
     
@@ -96,31 +96,63 @@ async function callOpenRouter(model: string, messages: Array<{ role: string; con
 function parseJSONSafely(text: string, context: string = 'JSON'): any {
     let jsonText = text.trim();
     
-    // Remove markdown code blocks
-    if (jsonText.includes('```json')) {
-        const match = jsonText.match(/```json\s*([\s\S]*?)\s*```/);
-        if (match) jsonText = match[1].trim();
-    } else if (jsonText.includes('```')) {
-        const match = jsonText.match(/```\s*([\s\S]*?)\s*```/);
-        if (match) jsonText = match[1].trim();
+    // Strategy 1: Try direct parse first (fastest path for valid JSON)
+    try {
+        return JSON.parse(jsonText);
+    } catch {
+        // Continue to cleanup strategies
     }
     
-    // Extract JSON by finding the outermost array or object
+    // Strategy 2: Remove markdown code blocks
+    if (jsonText.includes('```json')) {
+        const match = jsonText.match(/```json\s*([\s\S]*?)\s*```/);
+        if (match) {
+            jsonText = match[1].trim();
+            try {
+                return JSON.parse(jsonText);
+            } catch {
+                // Continue
+            }
+        }
+    } else if (jsonText.includes('```')) {
+        const match = jsonText.match(/```[a-z]*\s*([\s\S]*?)\s*```/);
+        if (match) {
+            jsonText = match[1].trim();
+            try {
+                return JSON.parse(jsonText);
+            } catch {
+                // Continue
+            }
+        }
+    }
+    
+    // Strategy 3: Extract JSON by finding the outermost array or object
     // This handles cases where there's extra text before/after
-    const extractJSON = (str: string): string => {
+    const extractJSON = (str: string): string | null => {
         // Find the first [ or {
-        const firstBracket = Math.min(
-            str.indexOf('[') !== -1 ? str.indexOf('[') : Infinity,
-            str.indexOf('{') !== -1 ? str.indexOf('{') : Infinity
-        );
+        let firstBracket = Infinity;
+        let startChar = '';
+        let endChar = '';
+        
+        const arrayIndex = str.indexOf('[');
+        const objectIndex = str.indexOf('{');
+        
+        if (arrayIndex !== -1 && arrayIndex < firstBracket) {
+            firstBracket = arrayIndex;
+            startChar = '[';
+            endChar = ']';
+        }
+        if (objectIndex !== -1 && objectIndex < firstBracket) {
+            firstBracket = objectIndex;
+            startChar = '{';
+            endChar = '}';
+        }
         
         if (firstBracket === Infinity) {
-            return str;
+            return null;
         }
         
         const startIndex = firstBracket;
-        const startChar = str[startIndex];
-        const endChar = startChar === '[' ? ']' : '}';
         
         // Track depth, but be careful inside strings
         let depth = 0;
@@ -141,7 +173,7 @@ function parseJSONSafely(text: string, context: string = 'JSON'): any {
                 continue;
             }
             
-            if (char === '"' && !escapeNext) {
+            if (char === '"') {
                 inString = !inString;
                 continue;
             }
@@ -159,14 +191,34 @@ function parseJSONSafely(text: string, context: string = 'JSON'): any {
             }
         }
         
+        if (depth !== 0) {
+            return null; // Unmatched brackets
+        }
+        
         return str.substring(startIndex, lastIndex);
     };
     
-    // Extract the JSON structure
-    jsonText = extractJSON(jsonText);
+    // Try extracting JSON
+    const extracted = extractJSON(jsonText);
+    if (extracted) {
+        jsonText = extracted;
+        try {
+            return JSON.parse(jsonText);
+        } catch {
+            // Continue to fix strategies
+        }
+    }
     
-    // Fix Python-style tuples OUTSIDE of strings
-    // We need to be careful not to modify string contents
+    // Strategy 4: Quick fixes - remove trailing commas and try parse
+    let cleaned = jsonText.replace(/,(\s*[}\]])/g, '$1');
+    
+    try {
+        return JSON.parse(cleaned);
+    } catch {
+        // Continue to tuple fixing only if needed
+    }
+    
+    // Strategy 5: Fix Python-style tuples OUTSIDE of strings only
     const fixTuples = (str: string): string => {
         let result = '';
         let inString = false;
@@ -199,8 +251,7 @@ function parseJSONSafely(text: string, context: string = 'JSON'): any {
             
             if (!inString) {
                 // Look for tuples: (value1, value2, ...)
-                // Match pattern: ( followed by content, followed by )
-                // But only if it's in a value context (after : or , or [)
+                // Only if it's in a value context (after : or , or [)
                 if (char === '(' && (i === 0 || /[\[:,\s]/.test(str[i - 1]))) {
                     // Find the matching closing parenthesis
                     let tupleDepth = 1;
@@ -258,33 +309,193 @@ function parseJSONSafely(text: string, context: string = 'JSON'): any {
         return result;
     };
     
-    jsonText = fixTuples(jsonText);
+    cleaned = fixTuples(cleaned);
     
-    // Try parsing
+    // Strategy 6: Final parse attempt with all fixes
     try {
-        return JSON.parse(jsonText);
+        return JSON.parse(cleaned);
     } catch (parseError: any) {
-        // Log the problematic text for debugging
+        // Log detailed error information
         const errorPos = parseError.message.match(/position (\d+)/)?.[1];
         console.error(`Failed to parse ${context}:`, parseError.message);
+        
         if (errorPos) {
             const pos = parseInt(errorPos);
-            const start = Math.max(0, pos - 100);
-            const end = Math.min(jsonText.length, pos + 100);
-            console.error('Problematic JSON around error position:', jsonText.substring(start, end));
-            console.error('Error at position:', pos, 'Character:', jsonText[pos]);
+            const start = Math.max(0, pos - 200);
+            const end = Math.min(cleaned.length, pos + 200);
+            console.error('Problematic JSON around error position:', cleaned.substring(start, end));
+            console.error('Error at position:', pos, 'Character:', cleaned[pos], 'Code:', cleaned.charCodeAt(pos));
         } else {
-            console.error('Problematic JSON text (first 1000 chars):', jsonText.substring(0, 1000));
+            console.error('Problematic JSON text (first 2000 chars):', cleaned.substring(0, 2000));
         }
         
-        // Last resort: try to fix common issues
-        // Remove any trailing commas before } or ]
-        jsonText = jsonText.replace(/,(\s*[}\]])/g, '$1');
+        // Strategy 7: Fix escaped quotes in arrays (common AI mistake)
+        // The AI sometimes returns [\"value\"] instead of ["value"]
+        // We need to fix this by processing arrays character by character
+        let finalAttempt = cleaned;
+        
+        // Process the string to fix escaped quotes inside arrays
+        let result = '';
+        let i = 0;
+        let inArray = false;
+        let arrayDepth = 0;
+        let inString = false;
+        let escapeNext = false;
+        
+        while (i < finalAttempt.length) {
+            const char = finalAttempt[i];
+            const nextChar = i + 1 < finalAttempt.length ? finalAttempt[i + 1] : '';
+            
+            if (escapeNext) {
+                // If we're inside an array and see \", replace with just "
+                if (inArray && char === '"') {
+                    result += '"';
+                } else {
+                    result += '\\' + char;
+                }
+                escapeNext = false;
+                i++;
+                continue;
+            }
+            
+            if (char === '\\') {
+                escapeNext = true;
+                i++;
+                continue;
+            }
+            
+            if (char === '"') {
+                inString = !inString;
+                result += char;
+                i++;
+                continue;
+            }
+            
+            if (!inString) {
+                if (char === '[') {
+                    arrayDepth++;
+                    inArray = true;
+                    result += char;
+                    i++;
+                    continue;
+                }
+                
+                if (char === ']') {
+                    arrayDepth--;
+                    if (arrayDepth === 0) {
+                        inArray = false;
+                    }
+                    result += char;
+                    i++;
+                    continue;
+                }
+            }
+            
+            result += char;
+            i++;
+        }
+        
+        finalAttempt = result;
         
         try {
-            return JSON.parse(jsonText);
+            return JSON.parse(finalAttempt);
         } catch (finalError: any) {
-            throw new Error(`Invalid JSON in ${context}: ${parseError.message}. Raw text preview: ${jsonText.substring(0, 500)}`);
+            // Strategy 8: Ultra-lenient cleanup - remove unwanted symbols but keep structure
+            let ultraLenient = finalAttempt;
+            
+            // Remove markdown code block markers if still present
+            ultraLenient = ultraLenient.replace(/```json\s*/g, '');
+            ultraLenient = ultraLenient.replace(/```\s*/g, '');
+            ultraLenient = ultraLenient.replace(/`/g, '');
+            
+            // Remove any backslashes before quotes in array contexts (more aggressive)
+            // Pattern: find [ ... ] and fix \" to " inside
+            ultraLenient = ultraLenient.replace(/\[([^\]]*)\]/g, (match, content) => {
+                // Replace all \" with " inside array brackets
+                const fixed = content.replace(/\\"/g, '"');
+                return '[' + fixed + ']';
+            });
+            
+            // Fix escaped quotes in object values that are clearly wrong
+            // Pattern: "key": \"value\" should become "key": "value"  
+            ultraLenient = ultraLenient.replace(/:\s*\\"/g, ': "');
+            
+            // Last resort: if we're here, be very aggressive with array-like patterns
+            // But preserve valid JSON string escapes
+            // Only do this if previous attempts failed
+            
+            // Fix common issues: remove trailing commas more aggressively
+            ultraLenient = ultraLenient.replace(/,(\s*[}\]])/g, '$1');
+            
+            // Remove any control characters except newlines and tabs
+            ultraLenient = ultraLenient.replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/g, '');
+            
+            try {
+                return JSON.parse(ultraLenient);
+            } catch {
+                // Strategy 9: Try to extract and parse partial JSON
+                // Extract just the array part if it exists
+                const arrayMatch = ultraLenient.match(/\[[\s\S]*\]/);
+                if (arrayMatch) {
+                    try {
+                        const partial = arrayMatch[0];
+                        // One more aggressive cleanup on the partial
+                        const cleanedPartial = partial
+                            .replace(/\\"/g, '"')  // Remove all escaped quotes
+                            .replace(/,(\s*[}\]])/g, '$1')  // Remove trailing commas
+                            .replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/g, '');  // Remove control chars
+                        
+                        const parsed = JSON.parse(cleanedPartial);
+                        if (Array.isArray(parsed) && parsed.length > 0) {
+                            console.warn(`⚠️ Parsed partial JSON successfully (${parsed.length} items)`);
+                            return parsed;
+                        }
+                    } catch {
+                        // Continue to next strategy
+                    }
+                }
+                
+                // Strategy 10: Last resort - try to manually construct valid objects from fragments
+                // Extract individual challenge objects even if array is broken
+                const objectMatches = ultraLenient.match(/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/g);
+                if (objectMatches && objectMatches.length > 0) {
+                    const validObjects: any[] = [];
+                    for (const objStr of objectMatches) {
+                        try {
+                            // Clean up the object string
+                            let cleanObj = objStr
+                                .replace(/\\"/g, '"')
+                                .replace(/,(\s*[}])/g, '$1')
+                                .replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/g, '');
+                            
+                            const parsed = JSON.parse(cleanObj);
+                            // Validate it has required fields
+                            if (parsed.title || parsed.description || parsed.functionSignature) {
+                                validObjects.push(parsed);
+                            }
+                        } catch {
+                            // Skip this object, continue with others
+                            continue;
+                        }
+                    }
+                    
+                    if (validObjects.length > 0) {
+                        console.warn(`⚠️ Extracted ${validObjects.length} valid objects from malformed JSON`);
+                        return validObjects;
+                    }
+                }
+                
+                // All strategies failed - but let's still try to provide useful error
+                console.error(`❌ All JSON parsing strategies failed for ${context}`);
+                console.error('Final attempt (first 500 chars):', ultraLenient.substring(0, 500));
+                
+                // Don't throw - return empty array or try one more time with very basic cleanup
+                // This allows the retry mechanism to kick in
+                throw new Error(
+                    `Invalid JSON in ${context} after all cleanup attempts: ${parseError.message}. ` +
+                    `Raw text preview (first 1000 chars): ${text.substring(0, 1000)}`
+                );
+            }
         }
     }
 }
@@ -406,14 +617,14 @@ export async function generateCodingChallenges(
     // Get an available model
     const model = await getAvailableModel();
 
-    // Prepare repository context
-    const fileSummaries = repoAnalysis.files.slice(0, 5).map(file => {
-        const preview = file.content.substring(0, 500);
-        return `File: ${file.path}\nPreview:\n${preview}...`;
-    }).join('\n\n');
+    // Prepare repository context (optimized for speed - less context)
+    const fileSummaries = repoAnalysis.files.slice(0, 3).map(file => {
+        const preview = file.content.substring(0, 300);
+        return `File: ${file.path}\n${preview}...`;
+    }).join('\n');
 
     const readmeContext = repoAnalysis.readme 
-        ? `\n\nREADME:\n${repoAnalysis.readme.substring(0, 1000)}`
+        ? `\nREADME: ${repoAnalysis.readme.substring(0, 500)}`
         : '';
 
     // Determine function signature format based on skill
@@ -427,77 +638,87 @@ export async function generateCodingChallenges(
 
     const signatureExample = signatureExamples[skill] || signatureExamples.Python;
 
-    const prompt = `You are an expert technical interviewer. Based on the following code repository, generate exactly ${count} algorithm/coding challenges that:
+    const prompt = `Generate exactly ${count} coding challenges for ${skill} based on this repository:
 
-1. Are related to the code patterns, concepts, or algorithms found in the repository
-2. Test practical coding ability in ${skill}
-3. Have clear, unambiguous function signatures
-4. Include 3-5 test cases each with inputs and expected outputs
-5. Are progressively more challenging
+Context:
+${fileSummaries}${readmeContext}
 
-Repository Context:
-Skill: ${skill}
-Files Analyzed:
-${fileSummaries}
-${readmeContext}
-
-Function Signature Format Example: ${signatureExample}
+Format: ${signatureExample}
 
 Requirements:
-- Each challenge should be solvable in 20-50 lines of code
-- Test cases should cover edge cases (empty inputs, single elements, etc.)
-- Challenges should relate to patterns or concepts seen in the repository
-- Provide starter code template if helpful
+- Related to repository patterns
+- 3-5 test cases each
+- Solvable in 20-50 lines
 
-Return ONLY a valid JSON array in this exact format (no markdown, no code blocks):
-[
-  {
-    "title": "Challenge Title",
-    "description": "Detailed problem description explaining what the function should do",
-    "functionSignature": "def solve(input: List[int]) -> int:",
-    "testCases": [
-      {
-        "input": [1, 2, 3],
-        "expectedOutput": 6,
-        "description": "Basic case"
-      },
-      {
-        "input": [],
-        "expectedOutput": 0,
-        "description": "Empty input"
-      }
-    ],
-    "starterCode": "def solve(input: List[int]) -> int:\n    # Your code here\n    pass"
-  },
-  ...
-]
+CRITICAL: Return ONLY valid JSON array, no markdown. Use ["value"] NOT [\\"value\\"]. Start with [ and end with ].
 
-Generate exactly ${count} challenges.`;
+Example format:
+[{"title":"Title","description":"Desc","functionSignature":"def f(x):","testCases":[{"input":[1,2],"expectedOutput":3}],"starterCode":"def f(x):\\n    pass"}]
 
-    try {
-        const text = await callOpenRouter(model, [
-            { role: 'user', content: prompt }
-        ], 4000);
+Generate ${count} challenges. JSON only, no other text.`;
 
-        // Parse JSON with robust error handling
-        const challenges: CodingChallenge[] = parseJSONSafely(text, 'coding challenges');
+    // Retry logic for handling malformed JSON responses
+    const maxRetries = 3;
+    let lastError: any = null;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            const text = await callOpenRouter(model, [
+                { role: 'user', content: prompt }
+            ], 3000); // Reduced from 4000 for faster generation
 
-        // Validate and add IDs
-        if (!Array.isArray(challenges)) {
-            throw new Error('Generated challenges are not in array format');
+            // Log raw response for debugging (only in dev mode and first attempt)
+            if (attempt === 1 && process.env.NODE_ENV === 'development') {
+                console.log('Raw AI response preview:', text.substring(0, 300));
+            }
+
+            // Parse JSON with robust error handling
+            const challenges: CodingChallenge[] = parseJSONSafely(text, 'coding challenges');
+
+            // Validate and add IDs
+            if (!Array.isArray(challenges)) {
+                throw new Error('Generated challenges are not in array format');
+            }
+
+            // Validate challenge structure
+            const validChallenges = challenges.filter(c => 
+                c.title && 
+                c.description && 
+                c.functionSignature && 
+                Array.isArray(c.testCases) && 
+                c.testCases.length > 0
+            );
+
+            if (validChallenges.length === 0) {
+                throw new Error('No valid challenges generated');
+            }
+
+            return validChallenges.map((c, index) => ({
+                id: `challenge-${Date.now()}-${index}`,
+                title: c.title || `Challenge ${index + 1}`,
+                description: c.description || '',
+                functionSignature: c.functionSignature || '',
+                testCases: (c.testCases || []).map((tc: any) => ({
+                    input: tc.input,
+                    expectedOutput: tc.expectedOutput,
+                    description: tc.description || ''
+                })),
+                starterCode: c.starterCode || c.functionSignature + '\n    pass'
+            })).slice(0, count);
+
+        } catch (error: any) {
+            lastError = error;
+            console.error(`Error generating coding challenges (attempt ${attempt}/${maxRetries}):`, error.message);
+            
+            if (attempt < maxRetries) {
+                // Wait before retry (shorter delays for faster retries)
+                await new Promise(resolve => setTimeout(resolve, 300 * attempt));
+                console.log(`Retrying generation (attempt ${attempt + 1}/${maxRetries})...`);
+            }
         }
-
-        return challenges.map((c, index) => ({
-            id: `challenge-${Date.now()}-${index}`,
-            title: c.title,
-            description: c.description,
-            functionSignature: c.functionSignature,
-            testCases: c.testCases || [],
-            starterCode: c.starterCode || c.functionSignature + '\n    pass'
-        })).slice(0, count);
-
-    } catch (error: any) {
-        console.error('Error generating coding challenges:', error);
-        throw new Error(`Failed to generate coding challenges: ${error.message}`);
     }
+    
+    // All retries failed
+    console.error('Failed to generate coding challenges after all retries:', lastError);
+    throw new Error(`Failed to generate coding challenges: ${lastError?.message || 'Unknown error'}`);
 }

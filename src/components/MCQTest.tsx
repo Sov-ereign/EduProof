@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle, XCircle, AlertCircle, RotateCcw, Loader2, Sparkles, ChevronRight } from "lucide-react";
+import { CheckCircle, XCircle, AlertCircle, RotateCcw, Loader2, Sparkles, ChevronRight, Video, VideoOff, Shield, AlertTriangle } from "lucide-react";
+import { useAntiCheat } from "@/hooks/useAntiCheat";
 
 export interface MCQQuestion {
     id: string;
@@ -14,7 +15,7 @@ export interface MCQQuestion {
 
 interface MCQTestProps {
     questions: MCQQuestion[];
-    onComplete: (score: number, passed: boolean) => void;
+    onComplete: (score: number, passed: boolean, correctCount?: number) => void;
     onRetry?: () => void;
     onNext?: () => void;
 }
@@ -25,6 +26,34 @@ export default function MCQTest({ questions, onComplete, onRetry, onNext }: MCQT
     const [score, setScore] = useState<number | null>(null);
     const [currentQuestion, setCurrentQuestion] = useState(0);
     const [showAll, setShowAll] = useState(false);
+    const [showCameraWarning, setShowCameraWarning] = useState(false);
+
+    // Anti-cheat system
+    const { status, start, stop, isBlocked } = useAntiCheat({
+        onViolation: (type) => {
+            console.warn(`Anti-cheat violation: ${type}`);
+        },
+        onWarning: (message) => {
+            setShowCameraWarning(true);
+            setTimeout(() => setShowCameraWarning(false), 5000);
+        },
+        maxViolations: 3
+    });
+
+    // Start anti-cheat when component mounts
+    useEffect(() => {
+        start();
+        return () => {
+            stop();
+        };
+    }, [start, stop]);
+
+    // Block submission if too many violations
+    useEffect(() => {
+        if (isBlocked && !submitted) {
+            alert("Test blocked due to multiple violations. Please maintain focus and camera visibility.");
+        }
+    }, [isBlocked, submitted]);
 
     const handleAnswer = (questionId: string, answerIndex: number) => {
         if (submitted) return;
@@ -51,7 +80,7 @@ export default function MCQTest({ questions, onComplete, onRetry, onNext }: MCQT
 
         // Check if passed (≥70%)
         const passed = calculatedScore >= 70;
-        onComplete(calculatedScore, passed);
+        onComplete(calculatedScore, passed, correct);
     };
 
     const handleRetry = () => {
@@ -77,7 +106,7 @@ export default function MCQTest({ questions, onComplete, onRetry, onNext }: MCQT
             const calculatedScore = 100; // Full marks
             setScore(calculatedScore);
             setSubmitted(true);
-            onComplete(calculatedScore, true); // Always passes with master mode
+            onComplete(calculatedScore, true, questions.length); // Always passes with master mode
         }, 500);
     };
 
@@ -236,6 +265,54 @@ export default function MCQTest({ questions, onComplete, onRetry, onNext }: MCQT
 
     return (
         <div className="w-full">
+            {/* Anti-Cheat Status Bar */}
+            <div className="mb-4 bg-gray-900/50 rounded-xl p-3 border border-gray-800 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <Shield className={`w-5 h-5 ${status.tabFocused ? 'text-green-400' : 'text-yellow-400'}`} />
+                    <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${status.tabFocused ? 'bg-green-400 animate-pulse' : 'bg-yellow-400'}`} />
+                        <span className="text-xs text-gray-300 font-medium">
+                            {status.tabFocused ? 'Tab Monitoring Active' : 'Tab Switch Detected'}
+                        </span>
+                    </div>
+                    {status.violations > 0 && (
+                        <div className="flex items-center gap-1 px-2 py-1 bg-red-500/20 border border-red-500/50 rounded-lg">
+                            <AlertTriangle className="w-3 h-3 text-red-400" />
+                            <span className="text-xs text-red-400 font-bold">
+                                {status.violations}/{3} Violations
+                            </span>
+                        </div>
+                    )}
+                </div>
+                <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400">
+                        {status.tabFocused ? 'Focused' : 'Tab Switched'}
+                    </span>
+                </div>
+            </div>
+
+
+
+            {/* Warning Banner */}
+            {showCameraWarning && status.warnings.length > 0 && (
+                <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="mb-4 bg-yellow-500/10 border border-yellow-500/50 rounded-xl p-3 flex items-start gap-3"
+                >
+                    <AlertTriangle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                        <p className="text-yellow-300 font-medium text-sm">
+                            {status.warnings[status.warnings.length - 1]}
+                        </p>
+                        <p className="text-yellow-200/80 text-xs mt-1">
+                            Please maintain focus on the test window.
+                        </p>
+                    </div>
+                </motion.div>
+            )}
+
             {/* Progress Bar */}
             <div className="mb-10 bg-white/50 backdrop-blur-md p-6 rounded-2xl border border-slate-200/50 shadow-sm">
                 <div className="flex justify-between items-center mb-4">
@@ -325,15 +402,6 @@ export default function MCQTest({ questions, onComplete, onRetry, onNext }: MCQT
                             Previous
                         </button>
                         <div className="flex gap-2">
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={handleMaster}
-                                className="px-4 py-2 bg-gradient-to-r from-yellow-500 to-amber-500 text-white rounded-lg font-bold transition flex items-center gap-2 shadow-lg shadow-yellow-500/30"
-                            >
-                                <Sparkles className="w-4 h-4" />
-                                Master
-                            </motion.button>
                             <button
                                 onClick={() => setShowAll(true)}
                                 className="px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition"
@@ -399,15 +467,6 @@ export default function MCQTest({ questions, onComplete, onRetry, onNext }: MCQT
                         >
                             Back to Single View
                         </button>
-                        <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={handleMaster}
-                            className="px-4 py-2 bg-gradient-to-r from-yellow-500 to-amber-500 text-white rounded-lg font-bold transition flex items-center gap-2 shadow-lg shadow-yellow-500/30"
-                        >
-                            <Sparkles className="w-4 h-4" />
-                            Master Mode
-                        </motion.button>
                     </div>
                 </div>
             )}

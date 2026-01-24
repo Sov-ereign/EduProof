@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Play, CheckCircle, XCircle, Loader2, AlertCircle, Sparkles, ChevronRight } from "lucide-react";
+import { Play, CheckCircle, XCircle, Loader2, AlertCircle, Sparkles, ChevronRight, Video, VideoOff, Shield, AlertTriangle } from "lucide-react";
+import { useAntiCheat } from "@/hooks/useAntiCheat";
 import Editor from "react-simple-code-editor";
 import { highlight, languages } from "prismjs";
 import "prismjs/components/prism-javascript";
@@ -37,6 +38,35 @@ export default function CodeEditor({ challenge, language, onComplete, onNext, is
     const [validating, setValidating] = useState(false);
     const [validationResult, setValidationResult] = useState<any>(null);
     const [submitted, setSubmitted] = useState(false);
+    const [showCameraWarning, setShowCameraWarning] = useState(false);
+
+    // Anti-cheat system
+    const { status, start, stop, videoRef, isBlocked } = useAntiCheat({
+        onViolation: (type) => {
+            console.warn(`Anti-cheat violation: ${type}`);
+        },
+        onWarning: (message) => {
+            setShowCameraWarning(true);
+            setTimeout(() => setShowCameraWarning(false), 5000);
+        },
+        maxViolations: 3,
+        enableCamera: true
+    });
+
+    // Start anti-cheat when component mounts
+    useEffect(() => {
+        start();
+        return () => {
+            stop();
+        };
+    }, [start, stop]);
+
+    // Block submission if too many violations
+    useEffect(() => {
+        if (isBlocked && !submitted) {
+            alert("Challenge blocked due to multiple violations. Please maintain focus and camera visibility.");
+        }
+    }, [isBlocked, submitted]);
 
     const getLanguageKey = (lang: string): string => {
         const langMap: Record<string, string> = {
@@ -116,6 +146,67 @@ export default function CodeEditor({ challenge, language, onComplete, onNext, is
 
     return (
         <div className="w-full space-y-4">
+            {/* Anti-Cheat Status Bar */}
+            <div className="bg-gray-900/50 rounded-xl p-3 border border-gray-800 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <Shield className={`w-5 h-5 ${status.cameraActive && status.tabFocused ? 'text-green-400' : 'text-yellow-400'}`} />
+                    <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${status.cameraActive ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
+                        <span className="text-xs text-gray-300 font-medium">
+                            {status.cameraActive ? 'Proctoring Active' : 'Camera Required'}
+                        </span>
+                    </div>
+                    {status.violations > 0 && (
+                        <div className="flex items-center gap-1 px-2 py-1 bg-red-500/20 border border-red-500/50 rounded-lg">
+                            <AlertTriangle className="w-3 h-3 text-red-400" />
+                            <span className="text-xs text-red-400 font-bold">
+                                {status.violations}/{3} Violations
+                            </span>
+                        </div>
+                    )}
+                </div>
+                <div className="flex items-center gap-2">
+                    {status.cameraActive ? (
+                        <Video className="w-4 h-4 text-green-400" />
+                    ) : (
+                        <VideoOff className="w-4 h-4 text-red-400" />
+                    )}
+                    <span className="text-xs text-gray-400">
+                        {status.tabFocused ? 'Focused' : 'Tab Switched'}
+                    </span>
+                </div>
+            </div>
+
+            {/* Hidden video element for camera */}
+            <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="hidden"
+                style={{ width: '1px', height: '1px', position: 'absolute', top: '-9999px' }}
+            />
+
+            {/* Warning Banner */}
+            {showCameraWarning && status.warnings.length > 0 && (
+                <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="bg-yellow-500/10 border border-yellow-500/50 rounded-xl p-3 flex items-start gap-3"
+                >
+                    <AlertTriangle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                        <p className="text-yellow-300 font-medium text-sm">
+                            {status.warnings[status.warnings.length - 1]}
+                        </p>
+                        <p className="text-yellow-200/80 text-xs mt-1">
+                            Please maintain focus on the challenge window and keep your camera visible.
+                        </p>
+                    </div>
+                </motion.div>
+            )}
+
             {/* Challenge Header */}
             <div className="bg-slate-900/90 backdrop-blur-md rounded-2xl p-6 border border-slate-800 shadow-xl overflow-hidden relative">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl -z-0" />

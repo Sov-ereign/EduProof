@@ -36,10 +36,21 @@ export default function TestFlowContainer({ repoAnalysis, skill, onComplete }: T
     const [mcqScore, setMcqScore] = useState<number | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [generatingReport, setGeneratingReport] = useState(false);
+    const [mcqCorrectCount, setMcqCorrectCount] = useState<number>(0);
+    const [mcqGenerated, setMcqGenerated] = useState(false);
+    const [finalScoreBreakdown, setFinalScoreBreakdown] = useState<any>(null);
+    const [codeQualityFeedback, setCodeQualityFeedback] = useState<string[]>([]);
+    const [codeReadability, setCodeReadability] = useState<any>(null);
+    const [repoQuality, setRepoQuality] = useState<any>(null);
 
-    // Generate MCQs on mount
+    // Generate MCQs on mount (only once)
     useEffect(() => {
-        generateMCQs();
+        if (!mcqGenerated) {
+            generateMCQs();
+            setMcqGenerated(true);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const generateMCQs = async () => {
@@ -69,8 +80,11 @@ export default function TestFlowContainer({ repoAnalysis, skill, onComplete }: T
         }
     };
 
-    const handleMCQComplete = async (score: number, passed: boolean) => {
+    const handleMCQComplete = async (score: number, passed: boolean, correctCount?: number) => {
         setMcqScore(score);
+        if (correctCount !== undefined) {
+            setMcqCorrectCount(correctCount);
+        }
         // Don't auto-proceed, wait for user to click Next button
     };
 
@@ -114,21 +128,123 @@ export default function TestFlowContainer({ repoAnalysis, skill, onComplete }: T
         // Don't auto-advance, let user click Next
     };
 
-    const handleChallengeNext = () => {
+    const handleChallengeNext = async () => {
         if (currentChallengeIndex < codingChallenges.length - 1) {
             // Move to next challenge instantly
             setCurrentChallengeIndex(currentChallengeIndex + 1);
         } else {
-            // All challenges completed, show final report
-            setPhase("completed");
-            // Calculate final score (MCQ 40% + Coding 60%)
-            const finalScore = Math.round((mcqScore || 0) * 0.4 + 100 * 0.6);
-            onComplete(finalScore);
+            // All challenges completed, calculate final score with new breakdown
+            setGeneratingReport(true);
+            setLoading(true);
+            
+            try {
+                // Import analysis functions
+                const { analyzeCodeReadability, analyzeRepoQuality } = await import('@/lib/repo-analyzer');
+                
+                // Calculate MCQ + Coding score (80 points combined) FIRST
+                const mcqPercentage = mcqScore || 0;
+                const codingPassed = challengeResults.filter(r => r).length;
+                const codingTotal = codingChallenges.length;
+                const codingPercentage = codingTotal > 0 ? (codingPassed / codingTotal) * 100 : 0;
+                
+                // Combined MCQ + Coding: 80 points
+                // Split: MCQ 40 points, Coding 40 points
+                const mcqContribution = (mcqPercentage / 100) * 40;
+                const codingContribution = (codingPercentage / 100) * 40;
+                const testScore = mcqContribution + codingContribution;
+                
+                // Debug logging
+                console.log('📊 Score Calculation Debug:', {
+                    mcqPercentage,
+                    mcqContribution,
+                    codingPercentage,
+                    codingContribution,
+                    testScore,
+                    filesCount: repoAnalysis.files?.length || 0
+                });
+                
+                // Calculate code readability score (10 points)
+                const readability = analyzeCodeReadability(repoAnalysis.files || []);
+                setCodeReadability(readability);
+                
+                // Calculate repo quality score (10 points)
+                const quality = analyzeRepoQuality(repoAnalysis.readme, repoAnalysis.repositoryInfo);
+                setRepoQuality(quality);
+                
+                // Code Readability: 10 points
+                const readabilityScore = readability.score;
+                
+                // Repo Quality: 10 points
+                const qualityScore = quality.score;
+                
+                // Debug logging
+                console.log('📊 Final Score Breakdown:', {
+                    testScore,
+                    readabilityScore,
+                    qualityScore,
+                    total: testScore + readabilityScore + qualityScore
+                });
+                
+                // Final score
+                const finalScore = Math.round(testScore + readabilityScore + qualityScore);
+                
+                // Create breakdown
+                const breakdown = {
+                    test: {
+                        mcq: {
+                            score: mcqPercentage,
+                            correct: mcqCorrectCount,
+                            total: mcqQuestions.length,
+                            contribution: mcqContribution,
+                            maxPoints: 40
+                        },
+                        coding: {
+                            score: codingPercentage,
+                            passed: codingPassed,
+                            total: codingTotal,
+                            allPassed: codingPassed === codingTotal,
+                            contribution: codingContribution,
+                            maxPoints: 40
+                        },
+                        total: testScore,
+                        maxPoints: 80
+                    },
+                    readability: {
+                        score: readabilityScore,
+                        maxPoints: 10,
+                        ratio: readability.ratio,
+                        codeLines: readability.codeLines,
+                        commentLines: readability.commentLines,
+                        feedback: readability.feedback
+                    },
+                    repoQuality: {
+                        score: qualityScore,
+                        maxPoints: 10,
+                        feedback: quality.feedback
+                    },
+                    final: finalScore
+                };
+                
+                setFinalScoreBreakdown(breakdown);
+                
+                // Small delay for better UX
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                setPhase("completed");
+                onComplete(finalScore);
+            } catch (error: any) {
+                console.error("Error calculating final score:", error);
+                setError(error.message || "Failed to generate final report");
+            } finally {
+                setLoading(false);
+                setGeneratingReport(false);
+            }
         }
     };
 
     const handleMCQRetry = () => {
         setMcqScore(null);
+        setMcqCorrectCount(0);
         setPhase("mcq");
         generateMCQs();
     };
@@ -169,6 +285,38 @@ export default function TestFlowContainer({ repoAnalysis, skill, onComplete }: T
                 >
                     <p className="text-2xl font-black text-white">Generating Coding Challenges...</p>
                     <p className="text-gray-400 font-medium">Creating personalized challenges based on your repository</p>
+                </motion.div>
+            </div>
+        );
+    }
+
+    if (generatingReport) {
+        return (
+            <div className="flex flex-col items-center justify-center py-12">
+                <div className="relative w-24 h-24 mb-6">
+                    <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                        className="absolute inset-0 border-4 border-green-200 border-t-green-600 rounded-full"
+                    />
+                    <motion.div
+                        animate={{ rotate: -360 }}
+                        transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                        className="absolute inset-4 border-4 border-emerald-200 border-t-emerald-600 rounded-full"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-16 h-16 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center">
+                            <Loader2 className="w-8 h-8 text-green-600 animate-spin" />
+                        </div>
+                    </div>
+                </div>
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-center space-y-2"
+                >
+                    <p className="text-2xl font-black text-white">Report is being generated...</p>
+                    <p className="text-gray-400 font-medium">Compiling your comprehensive evaluation results</p>
                 </motion.div>
             </div>
         );
@@ -261,7 +409,7 @@ export default function TestFlowContainer({ repoAnalysis, skill, onComplete }: T
                     >
                         <MCQTest
                             questions={mcqQuestions}
-                            onComplete={handleMCQComplete}
+                            onComplete={(score, passed, correctCount) => handleMCQComplete(score, passed, correctCount)}
                             onRetry={handleMCQRetry}
                             onNext={handleMCQNext}
                         />
@@ -327,10 +475,18 @@ export default function TestFlowContainer({ repoAnalysis, skill, onComplete }: T
                             <div className="bg-gray-900/50 rounded-xl p-6 inline-block border border-green-500/30">
                                 <p className="text-sm text-gray-400 mb-2 font-bold uppercase tracking-wider">Final Score</p>
                                 <p className="text-5xl font-black text-white">
-                                    {Math.round((mcqScore || 0) * 0.4 + 100 * 0.6)}/100
+                                    {finalScoreBreakdown ? finalScoreBreakdown.final : 0}/100
                                 </p>
                                 <p className="text-xs text-gray-400 mt-2">
-                                    MCQ: {mcqScore || 0}% (40%) + Coding: 100% (60%)
+                                    {finalScoreBreakdown ? (
+                                        <>
+                                            Tests: {Math.round(finalScoreBreakdown.test.total)}/80 + 
+                                            Readability: {Math.round(finalScoreBreakdown.readability.score)}/10 + 
+                                            Repo Quality: {Math.round(finalScoreBreakdown.repoQuality.score)}/10
+                                        </>
+                                    ) : (
+                                        "Calculating..."
+                                    )}
                                 </p>
                             </div>
                         </div>
@@ -355,16 +511,38 @@ export default function TestFlowContainer({ repoAnalysis, skill, onComplete }: T
                                             <span className="text-white font-bold">{mcqScore || 0}%</span>
                                         </div>
                                         <div className="flex justify-between items-center">
-                                            <span className="text-gray-400">MCQ Questions</span>
-                                            <span className="text-white font-bold">{mcqQuestions.length}/10</span>
+                                            <span className="text-gray-400">MCQ Correct</span>
+                                            <span className="text-white font-bold">{mcqCorrectCount}/{mcqQuestions.length}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-gray-400">MCQ Points</span>
+                                            <span className="text-white font-bold">
+                                                {finalScoreBreakdown ? Math.round(finalScoreBreakdown.test.mcq.contribution) : 0}/40
+                                            </span>
                                         </div>
                                         <div className="flex justify-between items-center">
                                             <span className="text-gray-400">Coding Challenges</span>
-                                            <span className="text-white font-bold">{codingChallenges.length}/3</span>
+                                            <span className="text-white font-bold">{codingChallenges.length}</span>
                                         </div>
                                         <div className="flex justify-between items-center">
-                                            <span className="text-gray-400">Challenges Passed</span>
-                                            <span className="text-green-400 font-bold">{challengeResults.filter(r => r).length}/{codingChallenges.length}</span>
+                                            <span className="text-gray-400">All Test Cases Passed</span>
+                                            <span className={`font-bold ${finalScoreBreakdown?.test.coding.allPassed ? 'text-green-400' : 'text-yellow-400'}`}>
+                                                {finalScoreBreakdown?.test.coding.allPassed ? '✓ Yes' : '✗ No'} ({challengeResults.filter(r => r).length}/{codingChallenges.length})
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-gray-400">Coding Points</span>
+                                            <span className="text-white font-bold">
+                                                {finalScoreBreakdown ? Math.round(finalScoreBreakdown.test.coding.contribution) : 0}/40
+                                            </span>
+                                        </div>
+                                        <div className="pt-2 border-t border-gray-700">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-gray-300 font-bold">Total Test Score</span>
+                                                <span className="text-white font-bold text-lg">
+                                                    {finalScoreBreakdown ? Math.round(finalScoreBreakdown.test.total) : 0}/80
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -376,6 +554,24 @@ export default function TestFlowContainer({ repoAnalysis, skill, onComplete }: T
                                         Repository Analysis
                                     </h5>
                                     <div className="space-y-3">
+                                        {repoAnalysis.repositoryInfo?.name && (
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-gray-400">Repository Name</span>
+                                                <span className="text-white font-bold">{repoAnalysis.repositoryInfo.name}</span>
+                                            </div>
+                                        )}
+                                        {repoAnalysis.repositoryInfo?.fullName && (
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-gray-400">Full Name</span>
+                                                <span className="text-white font-bold text-sm">{repoAnalysis.repositoryInfo.fullName}</span>
+                                            </div>
+                                        )}
+                                        {repoAnalysis.repositoryInfo?.description && (
+                                            <div>
+                                                <span className="text-gray-400 text-sm block mb-1">Description</span>
+                                                <span className="text-white font-bold text-sm">{repoAnalysis.repositoryInfo.description}</span>
+                                            </div>
+                                        )}
                                         <div className="flex justify-between items-center">
                                             <span className="text-gray-400">Files Analyzed</span>
                                             <span className="text-white font-bold">{repoAnalysis.files.length}</span>
@@ -390,6 +586,18 @@ export default function TestFlowContainer({ repoAnalysis, skill, onComplete }: T
                                                 <span className="text-white font-bold">{repoAnalysis.owner}</span>
                                             </div>
                                         )}
+                                        {repoAnalysis.repositoryInfo?.stars !== undefined && (
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-gray-400">Stars</span>
+                                                <span className="text-white font-bold">{repoAnalysis.repositoryInfo.stars}</span>
+                                            </div>
+                                        )}
+                                        {repoAnalysis.repositoryInfo?.forks !== undefined && (
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-gray-400">Forks</span>
+                                                <span className="text-white font-bold">{repoAnalysis.repositoryInfo.forks}</span>
+                                            </div>
+                                        )}
                                         {repoAnalysis.languages && Object.keys(repoAnalysis.languages).length > 0 && (
                                             <div>
                                                 <span className="text-gray-400 text-sm">Languages: </span>
@@ -402,30 +610,153 @@ export default function TestFlowContainer({ repoAnalysis, skill, onComplete }: T
                                 </div>
                             </div>
 
-                            {/* Detailed Metrics */}
+                            {/* Code Readability Analysis */}
+                            {codeReadability && (
+                                <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700 mb-6">
+                                    <h5 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                                        <FileCode className="w-5 h-5 text-blue-400" />
+                                        Code Readability Analysis
+                                        <span className="ml-auto text-sm font-bold text-blue-400">
+                                            {Math.round(codeReadability.score)}/10 points
+                                        </span>
+                                    </h5>
+                                    <div className="space-y-3">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-gray-400">Code Lines</span>
+                                            <span className="text-white font-bold">{codeReadability.codeLines}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-gray-400">Comment Lines</span>
+                                            <span className="text-white font-bold">{codeReadability.commentLines}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-gray-400">Comment Ratio</span>
+                                            <span className="text-white font-bold">{codeReadability.ratio.toFixed(1)}%</span>
+                                        </div>
+                                        <div className="pt-3 border-t border-gray-700 space-y-2">
+                                            {codeReadability.feedback.map((fb: string, i: number) => (
+                                                <p key={i} className="text-sm text-gray-300">{fb}</p>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Repository Quality Analysis */}
+                            {repoQuality && (
+                                <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700 mb-6">
+                                    <h5 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                                        <TrendingUp className="w-5 h-5 text-green-400" />
+                                        Repository Quality
+                                        <span className="ml-auto text-sm font-bold text-green-400">
+                                            {Math.round(repoQuality.score)}/10 points
+                                        </span>
+                                    </h5>
+                                    <div className="space-y-3">
+                                        {repoAnalysis.repositoryInfo && (
+                                            <>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-gray-400">Stars</span>
+                                                    <span className="text-white font-bold">{repoAnalysis.repositoryInfo.stars || 0}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-gray-400">Forks</span>
+                                                    <span className="text-white font-bold">{repoAnalysis.repositoryInfo.forks || 0}</span>
+                                                </div>
+                                            </>
+                                        )}
+                                        <div className="pt-3 border-t border-gray-700 space-y-2">
+                                            {repoQuality.feedback.map((fb: string, i: number) => (
+                                                <p key={i} className="text-sm text-gray-300">{fb}</p>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Point-by-Point Summary */}
                             <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700 mb-6">
                                 <h5 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                                    <TrendingUp className="w-5 h-5 text-green-400" />
-                                    Detailed Metrics
+                                    <BarChart3 className="w-5 h-5 text-purple-400" />
+                                    Point-by-Point Summary
+                                </h5>
+                                <div className="space-y-3">
+                                    <div className="flex items-start gap-3 p-3 bg-gray-900/50 rounded-lg">
+                                        <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+                                        <div>
+                                            <span className="text-white font-bold">MCQ Assessment: </span>
+                                            <span className="text-gray-300">
+                                                Answered {mcqCorrectCount} out of {mcqQuestions.length} questions correctly, achieving a score of {mcqScore || 0}%.
+                                                {mcqScore && mcqScore >= 70 ? " Passed the theoretical knowledge assessment." : " Did not meet the 70% passing threshold."}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start gap-3 p-3 bg-gray-900/50 rounded-lg">
+                                        <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+                                        <div>
+                                            <span className="text-white font-bold">Coding Challenges: </span>
+                                            <span className="text-gray-300">
+                                                Completed {challengeResults.filter(r => r).length} out of {codingChallenges.length} coding challenges successfully.
+                                                {challengeResults.filter(r => r).length === codingChallenges.length ? " All challenges passed, demonstrating strong practical coding skills." : " Some challenges need improvement."}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start gap-3 p-3 bg-gray-900/50 rounded-lg">
+                                        <CheckCircle className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+                                        <div>
+                                            <span className="text-white font-bold">Repository Analysis: </span>
+                                            <span className="text-gray-300">
+                                                Analyzed {repoAnalysis.files.length} files from the repository.
+                                                {repoAnalysis.repositoryInfo?.description && ` Repository focuses on: ${repoAnalysis.repositoryInfo.description.substring(0, 100)}${repoAnalysis.repositoryInfo.description.length > 100 ? '...' : ''}`}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start gap-3 p-3 bg-gray-900/50 rounded-lg">
+                                        <CheckCircle className="w-5 h-5 text-purple-400 flex-shrink-0 mt-0.5" />
+                                        <div>
+                                            <span className="text-white font-bold">Overall Performance: </span>
+                                            <span className="text-gray-300">
+                                                Final score: {finalScoreBreakdown ? finalScoreBreakdown.final : 0}/100.
+                                                Breakdown: Tests {finalScoreBreakdown ? Math.round(finalScoreBreakdown.test.total) : 0}/80, 
+                                                Readability {codeReadability ? Math.round(codeReadability.score) : 0}/10, 
+                                                Repo Quality {repoQuality ? Math.round(repoQuality.score) : 0}/10.
+                                                {finalScoreBreakdown && finalScoreBreakdown.final >= 70 ? " Excellent performance across all assessment criteria." : " Good effort with room for improvement in certain areas."}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Score Breakdown */}
+                            <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700 mb-6">
+                                <h5 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                                    <BarChart3 className="w-5 h-5 text-purple-400" />
+                                    Score Breakdown
                                 </h5>
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                     <div className="text-center">
-                                        <div className="text-3xl font-black text-purple-400 mb-1">{mcqScore || 0}%</div>
-                                        <div className="text-xs text-gray-400 uppercase tracking-wider">MCQ Accuracy</div>
+                                        <div className="text-3xl font-black text-purple-400 mb-1">
+                                            {finalScoreBreakdown ? Math.round(finalScoreBreakdown.test.total) : 0}
+                                        </div>
+                                        <div className="text-xs text-gray-400 uppercase tracking-wider">Tests (80 max)</div>
                                     </div>
                                     <div className="text-center">
-                                        <div className="text-3xl font-black text-green-400 mb-1">100%</div>
-                                        <div className="text-xs text-gray-400 uppercase tracking-wider">Code Quality</div>
+                                        <div className="text-3xl font-black text-blue-400 mb-1">
+                                            {codeReadability ? Math.round(codeReadability.score) : 0}
+                                        </div>
+                                        <div className="text-xs text-gray-400 uppercase tracking-wider">Readability (10 max)</div>
                                     </div>
                                     <div className="text-center">
-                                        <div className="text-3xl font-black text-blue-400 mb-1">{repoAnalysis.files.length}</div>
-                                        <div className="text-xs text-gray-400 uppercase tracking-wider">Files Reviewed</div>
+                                        <div className="text-3xl font-black text-green-400 mb-1">
+                                            {repoQuality ? Math.round(repoQuality.score) : 0}
+                                        </div>
+                                        <div className="text-xs text-gray-400 uppercase tracking-wider">Repo Quality (10 max)</div>
                                     </div>
                                     <div className="text-center">
                                         <div className="text-3xl font-black text-yellow-400 mb-1">
-                                            {Math.round((mcqScore || 0) * 0.4 + 100 * 0.6)}%
+                                            {finalScoreBreakdown ? finalScoreBreakdown.final : 0}
                                         </div>
-                                        <div className="text-xs text-gray-400 uppercase tracking-wider">Overall Score</div>
+                                        <div className="text-xs text-gray-400 uppercase tracking-wider">Final Score</div>
                                     </div>
                                 </div>
                             </div>

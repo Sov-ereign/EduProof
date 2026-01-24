@@ -41,8 +41,18 @@ export async function POST(request: Request) {
 
     } catch (e: any) {
         console.error('Error generating coding challenges:', e);
+        
+        // Provide more helpful error messages
+        let errorMessage = e.message || "Failed to generate coding challenges";
+        
+        // Check if it's a JSON parsing error
+        if (errorMessage.includes('Invalid JSON') || errorMessage.includes('JSON')) {
+            errorMessage = "The AI model returned invalid JSON. Please try again. If this persists, the model may be experiencing issues.";
+        }
+        
         return NextResponse.json({
-            error: e.message || "Failed to generate coding challenges",
+            error: errorMessage,
+            details: process.env.NODE_ENV === 'development' ? e.stack : undefined
         }, { status: 500 });
     }
 }
