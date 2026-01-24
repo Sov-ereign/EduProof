@@ -1,4 +1,12 @@
 import { NextResponse } from 'next/server';
+import {
+    analyzeReact,
+    analyzeRust,
+    analyzePython,
+    analyzeJavaScript,
+    analyzeTypeScript,
+    FileAnalysis
+} from '@/lib/code-analyzer';
 
 // Rubric definitions for different skills
 const RUBRICS: Record<string, {
@@ -532,53 +540,69 @@ async function fetchSourceCode(owner: string, repo: string, skill: string): Prom
     const candidates = filesToTry[skill] || ['src', 'lib', '*.js', '*.py'];
     const fetchedFiles: Array<{ path: string; content: string; extension: string }> = [];
 
-    // Try to get directory listing first
-    try {
-        const dirRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents`, { headers });
-        if (dirRes.ok) {
-            const dirData = await dirRes.json();
-            if (Array.isArray(dirData)) {
-                // Filter files by extension
-                const skillExtensions: Record<string, string[]> = {
-                    Rust: ['.rs'],
-                    Python: ['.py', '.pyw'],
-                    React: ['.jsx', '.tsx', '.js', '.ts'],
-                    JavaScript: ['.js', '.mjs'],
-                    TypeScript: ['.ts', '.tsx']
-                };
-                const extensions = skillExtensions[skill] || [];
-
-                for (const item of dirData) {
-                    if (item.type === 'file' && extensions.some(ext => item.name.endsWith(ext))) {
-                        try {
-                            // If using download_url, usually no auth needed if public, but for private/api limits, careful.
-                            // The 'url' field is the API url which needs auth.
-                            const fetchUrl = item.url;
-                            const fileRes = await fetch(fetchUrl, { headers });
-
-                            if (fileRes.ok) {
-                                const fileData = await fileRes.json();
-                                let content = '';
-                                if (fileData.content) {
-                                    content = Buffer.from(fileData.content, 'base64').toString('utf-8');
-                                } else if (item.download_url) {
-                                    const dlRes = await fetch(item.download_url);
-                                    content = await dlRes.text();
+    // Helper function to fetch files from a directory
+    const fetchFilesFromDir = async (dirPath: string, extensions: string[], maxFiles: number): Promise<void> => {
+        if (fetchedFiles.length >= maxFiles) return;
+        
+        try {
+            const dirRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${dirPath}`, { headers });
+            if (dirRes.ok) {
+                const dirData = await dirRes.json();
+                if (Array.isArray(dirData)) {
+                    for (const item of dirData) {
+                        if (fetchedFiles.length >= maxFiles) break;
+                        
+                        if (item.type === 'file' && extensions.some(ext => item.name.endsWith(ext))) {
+                            try {
+                                const fetchUrl = item.url;
+                                const fileRes = await fetch(fetchUrl, { headers });
+                                if (fileRes.ok) {
+                                    const fileData = await fileRes.json();
+                                    let content = '';
+                                    if (fileData.content) {
+                                        content = Buffer.from(fileData.content, 'base64').toString('utf-8');
+                                    } else if (item.download_url) {
+                                        const dlRes = await fetch(item.download_url);
+                                        content = await dlRes.text();
+                                    }
+                                    if (content) {
+                                        fetchedFiles.push({
+                                            path: item.path,
+                                            content,
+                                            extension: item.name.substring(item.name.lastIndexOf('.'))
+                                        });
+                                    }
                                 }
-
-                                if (content) {
-                                    fetchedFiles.push({
-                                        path: item.path,
-                                        content,
-                                        extension: item.name.substring(item.name.lastIndexOf('.'))
-                                    });
-                                }
-                                if (fetchedFiles.length >= 5) break; // Limit to 5 files
-                            }
-                        } catch (e) { continue; }
+                            } catch (e) { continue; }
+                        } else if (item.type === 'dir' && fetchedFiles.length < maxFiles - 5) {
+                            // Recursively fetch from subdirectories (limited depth)
+                            await fetchFilesFromDir(item.path, extensions, maxFiles);
+                        }
                     }
                 }
             }
+        } catch (e) {
+            // Silently fail for subdirectories
+        }
+    };
+
+    // Try to get directory listing first
+    try {
+        const skillExtensions: Record<string, string[]> = {
+            Rust: ['.rs'],
+            Python: ['.py', '.pyw'],
+            React: ['.jsx', '.tsx', '.js', '.ts'],
+            JavaScript: ['.js', '.mjs'],
+            TypeScript: ['.ts', '.tsx']
+        };
+        const extensions = skillExtensions[skill] || [];
+
+        // Fetch from root and common directories
+        const dirsToCheck: string[] = ['', 'src', 'src/components', 'src/pages', 'src/app', 'lib', 'components'];
+        
+        for (const dir of dirsToCheck) {
+            if (fetchedFiles.length >= 15) break;
+            await fetchFilesFromDir(dir, extensions, 15);
         }
     } catch (e) {
         // Fallback to specific file paths
@@ -606,102 +630,14 @@ async function fetchSourceCode(owner: string, repo: string, skill: string): Prom
                             content,
                             extension: file.substring(file.lastIndexOf('.'))
                         });
-                        if (fetchedFiles.length >= 3) break;
+                        if (fetchedFiles.length >= 10) break; // Increased for better coverage
                     }
                 }
             } catch (e) { continue; }
         }
     }
 
-    // Final Fallback: If absolutely no files were found (private repo, API limits, etc.),
-    // return a mock file so the demo/evaluation can proceed with a passing score.
-    if (fetchedFiles.length === 0) {
-        console.warn("fetchSourceCode: No files found via API. Using synthetic mock code for demo.");
 
-        const mockCode: Record<string, { path: string, content: string, ext: string }> = {
-            Rust: {
-                path: 'src/main.rs',
-                ext: '.rs',
-                content: `fn main() {
-    println!("Hello, world!");
-    let x = 42;
-    match x {
-        42 => println!("Success!"),
-        _ => println!("Error"),
-    }
-}
-
-pub fn calculate_score(input: i32) -> Result<i32, String> {
-    if input < 0 {
-        return Err("Negative input".to_string());
-    }
-    Ok(input * 2)
-}
-
-#[test]
-fn test_calculation() {
-    assert_eq!(calculate_score(10).unwrap(), 20);
-}`
-            },
-            Python: {
-                path: 'main.py',
-                ext: '.py',
-                content: `def main():
-    """
-    Main application entry point.
-    """
-    data = [1, 2, 3, 4, 5]
-    result = process_data(data)
-    print(f"Result: {result}")
-
-def process_data(items: list[int]) -> int:
-    """
-    Process the input list and return the sum.
-    """
-    return sum(items) * 2
-
-class DataProcessor:
-    def __init__(self):
-        self.value = 0
-
-if __name__ == "__main__":
-    main()`
-            },
-            React: {
-                path: 'src/App.tsx',
-                ext: '.tsx',
-                content: `import React, { useState, useEffect } from 'react';
-
-interface Props {
-  title: string;
-}
-
-export const App: React.FC<Props> = ({ title }) => {
-  const [count, setCount] = useState<number>(0);
-
-  useEffect(() => {
-    console.log("Component mounted");
-  }, []);
-
-  return (
-    <div className="app-container">
-      <h1>{title}</h1>
-      <button onClick={() => setCount(prev => prev + 1)}>
-        Count: {count}
-      </button>
-    </div>
-  );
-};`
-            }
-        };
-
-        const mock = mockCode[skill] || mockCode['Python'];
-        fetchedFiles.push({
-            path: mock.path,
-            content: mock.content,
-            extension: mock.ext
-        });
-    }
 
     return fetchedFiles;
 }
@@ -713,6 +649,13 @@ export async function GET(request: Request) {
 
     if (!evidenceUrl || evidenceUrl.trim().length === 0) {
         return NextResponse.json({ error: "Evidence URL is required" }, { status: 400 });
+    }
+
+    // Strict URL Syntax Validation
+    try {
+        new URL(evidenceUrl);
+    } catch {
+        return NextResponse.json({ error: "Invalid URL format provided" }, { status: 400 });
     }
 
     try {
@@ -748,23 +691,7 @@ export async function GET(request: Request) {
             if (!repoDataRes.ok) {
                 // If API fails with Rate Limit (403/429), use mock data to unblock demo
                 if (repoDataRes.status === 403 || repoDataRes.status === 429) {
-                    console.warn(`GitHub API Rate Limit (${repoDataRes.status}): Falling back to mock data for demo.`);
-                    repoData = {
-                        name: repo,
-                        full_name: `${owner}/${repo}`,
-                        description: "Repository access simulated directly (GitHub API rate limit hit).",
-                        stargazers_count: Math.floor(Math.random() * 50) + 5,
-                        forks_count: Math.floor(Math.random() * 20),
-                        watchers_count: 10,
-                        open_issues_count: 2,
-                        created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30).toISOString(),
-                        updated_at: new Date().toISOString(),
-                        pushed_at: new Date().toISOString(),
-                        homepage: null,
-                        topics: [skill.toLowerCase(), "demo", "project"],
-                        has_pages: true,
-                        owner: { login: owner }
-                    };
+                    throw new Error(`GitHub API Rate Limit (${repoDataRes.status}) exceeded. Unable to detect repository details.`);
                 } else {
                     // Strict error for 404 as requested, or other errors
                     const errorMsg = repoDataRes.status === 404
@@ -829,18 +756,25 @@ export async function GET(request: Request) {
                 skillMatch: { matches: false, confidence: 0, evidence: ["No source code found"] }
             };
 
+            // Store comprehensive analysis at higher scope for final scoring
+            let comprehensiveAnalysis: any = null;
+            const fileAnalyses: FileAnalysis[] = sourceFiles.length > 0 ? sourceFiles.map(file => ({
+                path: file.path,
+                content: file.content,
+                extension: file.extension,
+                lines: file.content.split('\n').length
+            })) : [];
+
             if (sourceFiles.length === 0) {
                 codeQuality.issues.push("⚠ Repository appears empty or source files not accessible");
                 codeQuality.issues.push("⚠ Cannot verify skill match without source code");
             } else {
-                // Analyze all fetched files
-                const analyses = sourceFiles.map(file =>
-                    analyzeCodeQuality(file.content, skill, file.extension)
+                // First, validate skill match using old method for compatibility
+                const skillValidations = sourceFiles.map(file =>
+                    validateSkillMatch(file.content, skill, file.extension)
                 );
-
-                // Check if ANY file matches the skill
-                const anyMatch = analyses.some(a => a.skillMatch.matches);
-                const avgConfidence = analyses.reduce((sum, a) => sum + a.skillMatch.confidence, 0) / analyses.length;
+                const anyMatch = skillValidations.some(v => v.matches);
+                const avgConfidence = skillValidations.reduce((sum, v) => sum + v.confidence, 0) / skillValidations.length;
 
                 if (!anyMatch && avgConfidence < 40) {
                     // CRITICAL: No files match the claimed skill - FAIL THE EVALUATION
@@ -851,25 +785,82 @@ export async function GET(request: Request) {
                         `Average confidence: ${Math.round(avgConfidence)}%`,
                         "",
                         "Evidence Analysis:",
-                        ...analyses.flatMap((a, i) => [
+                        ...skillValidations.flatMap((v, i) => [
                             `File ${i + 1}: ${sourceFiles[i].path}`,
-                            ...a.skillMatch.evidence.map(e => `  ${e}`)
+                            ...v.evidence.map(e => `  ${e}`)
                         ])
                     ];
                     codeQuality.skillMatch = { matches: false, confidence: avgConfidence, evidence: [] };
                 } else {
-                    // Calculate average scores
-                    const avgScore = analyses.reduce((sum, a) => sum + a.score, 0) / analyses.length;
-                    const allIssues = analyses.flatMap(a => a.issues);
+                    // Run comprehensive analyzers based on skill type
+                    let analysisFeedback: string[] = [];
+                    let analysisScore = 0;
+
+                    try {
+                        if (skill === 'React') {
+                            comprehensiveAnalysis = analyzeReact(fileAnalyses);
+                            analysisScore = (
+                                comprehensiveAnalysis.componentDesign.score * 0.30 +
+                                comprehensiveAnalysis.stateManagement.score * 0.25 +
+                                comprehensiveAnalysis.codeQuality.score * 0.25 +
+                                comprehensiveAnalysis.userExperience.score * 0.20
+                            );
+                            analysisFeedback = [
+                                `✓ Analyzed ${sourceFiles.length} source file(s) with comprehensive metrics`,
+                                `✓ Skill match verified (${Math.round(avgConfidence)}% confidence)`
+                            ];
+                        } else if (skill === 'Rust') {
+                            comprehensiveAnalysis = analyzeRust(fileAnalyses);
+                            analysisScore = (
+                                comprehensiveAnalysis.memorySafety.score * 0.35 +
+                                comprehensiveAnalysis.codeQuality.score * 0.25 +
+                                comprehensiveAnalysis.errorHandling.score * 0.25 +
+                                comprehensiveAnalysis.documentation.score * 0.15
+                            );
+                            analysisFeedback = [
+                                `✓ Analyzed ${sourceFiles.length} source file(s) with comprehensive metrics`,
+                                `✓ Skill match verified (${Math.round(avgConfidence)}% confidence)`
+                            ];
+                        } else if (skill === 'Python') {
+                            comprehensiveAnalysis = analyzePython(fileAnalyses);
+                            analysisScore = (
+                                comprehensiveAnalysis.codeReadability.score * 0.30 +
+                                comprehensiveAnalysis.logicCorrectness.score * 0.30 +
+                                comprehensiveAnalysis.useOfConcepts.score * 0.20 +
+                                comprehensiveAnalysis.explanationClarity.score * 0.20
+                            );
+                            analysisFeedback = [
+                                `✓ Analyzed ${sourceFiles.length} source file(s) with comprehensive metrics`,
+                                `✓ Skill match verified (${Math.round(avgConfidence)}% confidence)`
+                            ];
+                        } else if (skill === 'JavaScript') {
+                            comprehensiveAnalysis = analyzeJavaScript(fileAnalyses);
+                            analysisScore = comprehensiveAnalysis.codeReadability?.score || 50;
+                            analysisFeedback = [
+                                `✓ Analyzed ${sourceFiles.length} source file(s) with comprehensive metrics`,
+                                `✓ Skill match verified (${Math.round(avgConfidence)}% confidence)`
+                            ];
+                        } else if (skill === 'TypeScript') {
+                            comprehensiveAnalysis = analyzeTypeScript(fileAnalyses);
+                            analysisScore = comprehensiveAnalysis.codeReadability?.score || 50;
+                            analysisFeedback = [
+                                `✓ Analyzed ${sourceFiles.length} source file(s) with comprehensive metrics`,
+                                `✓ Skill match verified (${Math.round(avgConfidence)}% confidence)`
+                            ];
+                        }
+                    } catch (error) {
+                        console.error('Comprehensive analysis error:', error);
+                        // Fallback to old method
+                        const analyses = sourceFiles.map(file =>
+                            analyzeCodeQuality(file.content, skill, file.extension)
+                        );
+                        analysisScore = analyses.reduce((sum, a) => sum + a.score, 0) / analyses.length;
+                        analysisFeedback = analyses.flatMap(a => a.issues);
+                    }
 
                     codeQuality = {
-                        score: Math.round(avgScore),
-                        issues: [
-                            `✓ Analyzed ${sourceFiles.length} source file(s)`,
-                            `✓ Skill match verified (${Math.round(avgConfidence)}% confidence)`,
-                            "",
-                            ...allIssues
-                        ],
+                        score: Math.round(analysisScore),
+                        issues: analysisFeedback,
                         skillMatch: { matches: anyMatch, confidence: avgConfidence, evidence: [] }
                     };
                 }
@@ -883,32 +874,46 @@ export async function GET(request: Request) {
 
             // If source code validation failed, try language-based validation as fallback
             if (shouldFail && (sourceFiles.length === 0 || langData)) {
+                // Be very strict about what counts as a match
                 const skillLangMap: Record<string, string[]> = {
                     Python: ['Python'],
                     Rust: ['Rust'],
+                    // React is STRICTLY JSX/TSX or high % TypeScript
                     React: ['JavaScript', 'TypeScript', 'TSX', 'JSX'],
                     JavaScript: ['JavaScript', 'JSX'],
                     TypeScript: ['TypeScript', 'TSX']
                 };
                 const expectedLangs = skillLangMap[skill] || [skill];
 
-                // Check if language data shows the skill
+                // Check if language data shows the skill SIGNIFICANTLY
                 if (langData && Object.keys(langData).length > 0) {
-                    const hasSkillLang = Object.keys(langData).some(lang =>
-                        expectedLangs.some(expected =>
+                    const langEntries = Object.entries(langData);
+                    const totalBytes = langEntries.reduce((sum, [, bytes]) => sum + (bytes as number), 0);
+
+                    // Calculate skill percentage
+                    let skillBytes = 0;
+                    for (const [lang, bytes] of langEntries) {
+                        if (expectedLangs.some(expected =>
                             lang.toLowerCase().includes(expected.toLowerCase()) ||
                             expected.toLowerCase().includes(lang.toLowerCase())
-                        )
-                    );
+                        )) {
+                            skillBytes += (bytes as number);
+                        }
+                    }
+                    const skillPercent = (skillBytes / totalBytes) * 100;
 
-                    if (hasSkillLang) {
-                        // Language matches - allow evaluation to proceed
+                    // STRICT THRESHOLD: Must be at least 15% of the codebase to even consider passing
+                    if (skillPercent >= 15) {
                         shouldFail = false;
-                        validationWarnings.push("⚠️ Could not fully validate source code, but language data confirms skill match");
+                        validationWarnings.push(`⚠️ Source code analysis limited, but language data confirms ${skill} usage (${Math.round(skillPercent)}%)`);
+                    } else {
+                        // Hard fail if usage is trivial
+                        validationWarnings.push(`❌ Weak Language Match: ${skill} is only ${Math.round(skillPercent)}% of code (Required: >15%)`);
                     }
                 }
 
-                // Also check repo language field
+                // If we still think we should fail, check the repository language field as a last resort
+                // BUT only if it looks promising
                 if (shouldFail && repoData?.language) {
                     const repoLangMatches = expectedLangs.some(expected =>
                         repoData.language.toLowerCase().includes(expected.toLowerCase()) ||
@@ -916,7 +921,7 @@ export async function GET(request: Request) {
                     );
                     if (repoLangMatches) {
                         shouldFail = false;
-                        validationWarnings.push(`✓ Repository language (${repoData.language}) matches claimed skill`);
+                        validationWarnings.push(`✓ Repository primary language (${repoData.language}) matches claimed skill`);
                     }
                 }
             }
@@ -974,200 +979,101 @@ export async function GET(request: Request) {
             let totalScore = 0;
             const feedback: string[] = [...validationWarnings];
 
-            // 1. Repository Owner Profile (10%)
-            let ownerScore = 50; // Base score
-            if (ownerInfo) {
-                feedback.push(`✓ Repository Owner: ${ownerName}`);
-                if (ownerBio) {
-                    ownerScore += 10;
-                    feedback.push(`✓ Owner has bio: ${ownerBio.substring(0, 50)}...`);
-                }
-                if (ownerPublicRepos > 5) {
-                    ownerScore += 10;
-                    feedback.push(`✓ Owner has ${ownerPublicRepos} public repositories`);
-                }
-                if (ownerFollowers > 10) {
-                    ownerScore += 10;
-                    feedback.push(`✓ Owner has ${ownerFollowers} followers`);
-                }
-                if (ownerCompany) {
-                    ownerScore += 5;
-                    feedback.push(`✓ Owner affiliated with: ${ownerCompany}`);
-                }
-            } else {
-                feedback.push(`Repository Owner: ${ownerName} (limited profile info)`);
-            }
-            totalScore += (ownerScore * 10) / 100;
+            // NOW USE COMPREHENSIVE ANALYSIS SCORES INSTEAD OF STATIC ONES
+            if (comprehensiveAnalysis && sourceFiles.length > 0) {
+                // Use actual comprehensive analysis scores for each rubric criterion
+                if (skill === 'React') {
+                    // React: Component Design (30%), State Management (25%), Code Quality (25%), User Experience (20%)
+                    const componentDesignScore = comprehensiveAnalysis.componentDesign.score;
+                    const stateManagementScore = comprehensiveAnalysis.stateManagement.score;
+                    const codeQualityScore = comprehensiveAnalysis.codeQuality.score;
+                    const userExperienceScore = comprehensiveAnalysis.userExperience.score;
 
-            // 2. Code Readability / Documentation (30%)
-            let readabilityScore = 60;
-            if (readmeContent.length > 500) {
-                readabilityScore += 25;
-                feedback.push("✓ Comprehensive README with detailed documentation");
-            } else if (readmeContent.length > 100) {
-                readabilityScore += 15;
-                feedback.push("✓ Good README documentation");
-            } else {
-                feedback.push("⚠ Could improve README documentation");
-            }
-            if (repoData.description && repoData.description.length > 20) {
-                readabilityScore += 10;
-                feedback.push(`✓ Repository description: ${repoData.description}`);
-            }
-            if (repoData.language) {
-                readabilityScore += 5;
-                feedback.push(`✓ Primary language: ${repoData.language}`);
-            }
-            totalScore += (readabilityScore * rubric.criteria[0].weight) / 100;
+                    totalScore += (componentDesignScore * rubric.criteria[0].weight) / 100;
+                    totalScore += (stateManagementScore * rubric.criteria[1].weight) / 100;
+                    totalScore += (codeQualityScore * rubric.criteria[2].weight) / 100;
+                    totalScore += (userExperienceScore * rubric.criteria[3].weight) / 100;
 
-            // 3. Logic Correctness / Activity (30%)
-            let logicScore = 70;
-            const lastUpdate = new Date(repoData.pushed_at);
-            const daysSinceUpdate = Math.floor((Date.now() - lastUpdate.getTime()) / (1000 * 3600 * 24));
-            if (daysSinceUpdate < 7) {
-                logicScore += 20;
-                feedback.push("✓ Very active - updated within last week");
-            } else if (daysSinceUpdate < 30) {
-                logicScore += 15;
-                feedback.push("✓ Recently updated - active project");
-            } else if (daysSinceUpdate > 180) {
-                logicScore -= 10;
-                feedback.push("⚠ Low activity - last updated > 6 months ago");
-            }
-            
-            // ADJUSTED: More lenient scoring for student/hackathon projects
-            if (repoData.stargazers_count > 5) {
-                logicScore += 15;
-                feedback.push(`✓ Strong community interest: ${repoData.stargazers_count} stars ⭐`);
-            } else if (repoData.stargazers_count > 0) {
-                logicScore += 10;
-                feedback.push(`✓ Has community interest: ${repoData.stargazers_count} stars ⭐`);
-            } else {
-                // No penalty for 0 stars, just neutral
-                feedback.push("ℹ New project (0 stars)");
-            }
+                    feedback.push(`📊 Component Design: ${componentDesignScore}/100 (${rubric.criteria[0].weight}% weight)`);
+                    feedback.push(`📊 State Management: ${stateManagementScore}/100 (${rubric.criteria[1].weight}% weight)`);
+                    feedback.push(`📊 Code Quality: ${codeQualityScore}/100 (${rubric.criteria[2].weight}% weight)`);
+                    feedback.push(`📊 User Experience: ${userExperienceScore}/100 (${rubric.criteria[3].weight}% weight)`);
+                    feedback.push(...comprehensiveAnalysis.componentDesign.feedback);
+                    feedback.push(...comprehensiveAnalysis.stateManagement.feedback);
+                    feedback.push(...comprehensiveAnalysis.codeQuality.feedback);
+                    feedback.push(...comprehensiveAnalysis.userExperience.feedback);
 
-            if (repoData.forks_count > 0) {
-                logicScore += 5;
-                feedback.push(`✓ Forked by others: ${repoData.forks_count}`);
-            }
-            
-            if (contributorsCount > 1) {
-                logicScore += 10;
-                feedback.push(`✓ Collaborative project: ${contributorsCount} contributors`);
-            } else {
-                logicScore += 5; // Solopreneur bonus
-                feedback.push("ℹ Solo project");
-            }
-            
-            totalScore += (logicScore * rubric.criteria[1].weight) / 100;
+                } else if (skill === 'Rust') {
+                    // Rust: Memory Safety (35%), Code Quality (25%), Error Handling (25%), Documentation (15%)
+                    const memorySafetyScore = comprehensiveAnalysis.memorySafety.score;
+                    const codeQualityScore = comprehensiveAnalysis.codeQuality.score;
+                    const errorHandlingScore = comprehensiveAnalysis.errorHandling.score;
+                    const documentationScore = comprehensiveAnalysis.documentation.score;
 
-            // 4. Use of Concepts / Code Quality (20%)
-            // Skill already validated above, proceed with quality scoring
-            let conceptsScore = codeQuality.score;
+                    totalScore += (memorySafetyScore * rubric.criteria[0].weight) / 100;
+                    totalScore += (codeQualityScore * rubric.criteria[1].weight) / 100;
+                    totalScore += (errorHandlingScore * rubric.criteria[2].weight) / 100;
+                    totalScore += (documentationScore * rubric.criteria[3].weight) / 100;
 
-            // Verify language match from GitHub stats - STRICT VALIDATION
-            if (langData) {
-                const langEntries = Object.entries(langData);
-                const totalBytes = langEntries.reduce((sum, [, bytes]) => sum + (bytes as number), 0);
-                const topLang = langEntries.reduce((a, b) => (a[1] as number) > (b[1] as number) ? a : b)[0];
-                const topLangPercent = ((langData[topLang] as number) / totalBytes) * 100;
+                    feedback.push(`📊 Memory Safety: ${memorySafetyScore}/100 (${rubric.criteria[0].weight}% weight)`);
+                    feedback.push(`📊 Code Quality: ${codeQualityScore}/100 (${rubric.criteria[1].weight}% weight)`);
+                    feedback.push(`📊 Error Handling: ${errorHandlingScore}/100 (${rubric.criteria[2].weight}% weight)`);
+                    feedback.push(`📊 Documentation: ${documentationScore}/100 (${rubric.criteria[3].weight}% weight)`);
+                    feedback.push(...comprehensiveAnalysis.memorySafety.feedback);
+                    feedback.push(...comprehensiveAnalysis.codeQuality.feedback);
+                    feedback.push(...comprehensiveAnalysis.errorHandling.feedback);
+                    feedback.push(...comprehensiveAnalysis.documentation.feedback);
 
-                const skillLangMap: Record<string, string[]> = {
-                    Python: ['Python'],
-                    Rust: ['Rust'],
-                    React: ['JavaScript', 'TypeScript', 'TSX', 'JSX'],
-                    JavaScript: ['JavaScript', 'JSX'],
-                    TypeScript: ['TypeScript', 'TSX']
-                };
+                } else if (skill === 'Python') {
+                    // Python: Code Readability (30%), Logic Correctness (30%), Use of Concepts (20%), Explanation Clarity (20%)
+                    const codeReadabilityScore = comprehensiveAnalysis.codeReadability.score;
+                    const logicCorrectnessScore = comprehensiveAnalysis.logicCorrectness.score;
+                    const useOfConceptsScore = comprehensiveAnalysis.useOfConcepts.score;
+                    const explanationClarityScore = comprehensiveAnalysis.explanationClarity.score;
 
-                const expectedLangs = skillLangMap[skill] || [skill];
-                const langMatches = expectedLangs.some(lang =>
-                    topLang.toLowerCase().includes(lang.toLowerCase()) ||
-                    lang.toLowerCase().includes(topLang.toLowerCase())
-                );
+                    totalScore += (codeReadabilityScore * rubric.criteria[0].weight) / 100;
+                    totalScore += (logicCorrectnessScore * rubric.criteria[1].weight) / 100;
+                    totalScore += (useOfConceptsScore * rubric.criteria[2].weight) / 100;
+                    totalScore += (explanationClarityScore * rubric.criteria[3].weight) / 100;
 
-                // Check if skill language exists at all
-                const skillLangExists = langEntries.some(([lang]) =>
-                    expectedLangs.some(expected =>
-                        lang.toLowerCase().includes(expected.toLowerCase()) ||
-                        expected.toLowerCase().includes(lang.toLowerCase())
-                    )
-                );
+                    feedback.push(`📊 Code Readability: ${codeReadabilityScore}/100 (${rubric.criteria[0].weight}% weight)`);
+                    feedback.push(`📊 Logic Correctness: ${logicCorrectnessScore}/100 (${rubric.criteria[1].weight}% weight)`);
+                    feedback.push(`📊 Use of Concepts: ${useOfConceptsScore}/100 (${rubric.criteria[2].weight}% weight)`);
+                    feedback.push(`📊 Explanation Clarity: ${explanationClarityScore}/100 (${rubric.criteria[3].weight}% weight)`);
+                    feedback.push(...comprehensiveAnalysis.codeReadability.feedback);
+                    feedback.push(...comprehensiveAnalysis.logicCorrectness.feedback);
+                    feedback.push(...comprehensiveAnalysis.useOfConcepts.feedback);
+                    feedback.push(...comprehensiveAnalysis.explanationClarity.feedback);
 
-                if (!skillLangExists) {
-                    // CRITICAL: Skill language not found in repository
-                    conceptsScore = 0;
-                    feedback.push(`❌ CRITICAL: Repository does not contain ${skill} code`);
-                    feedback.push(`Repository languages: ${Object.keys(langData).join(', ')}`);
-                    feedback.push(`Expected: ${expectedLangs.join(' or ')}`);
-                } else if (langMatches && topLangPercent > 30) {
-                    conceptsScore += 15;
-                    feedback.push(`✓ Repository uses ${skill} as primary language (${topLang}: ${Math.round(topLangPercent)}%)`);
-                } else if (langMatches) {
-                    conceptsScore += 5;
-                    feedback.push(`⚠ Repository uses ${skill} but only ${Math.round(topLangPercent)}% (primary: ${topLang})`);
                 } else {
-                    // Skill language exists but isn't primary
-                    const skillLangEntry = langEntries.find(([lang]) =>
-                        expectedLangs.some(expected =>
-                            lang.toLowerCase().includes(expected.toLowerCase())
-                        )
-                    );
-                    if (skillLangEntry) {
-                        const skillPercent = ((skillLangEntry[1] as number) / totalBytes) * 100;
-                        if (skillPercent > 20) {
-                            conceptsScore += 10;
-                            feedback.push(`✓ Repository contains ${skill} code (${Math.round(skillPercent)}%)`);
-                        } else {
-                            conceptsScore -= 10;
-                            feedback.push(`⚠ Repository has minimal ${skill} code (${Math.round(skillPercent)}%)`);
-                        }
-                    }
-                    feedback.push(`Primary language: ${topLang} (${Math.round(topLangPercent)}%)`);
+                    // JavaScript/TypeScript - use similar structure
+                    const codeReadabilityScore = comprehensiveAnalysis.codeReadability?.score || 50;
+                    totalScore += (codeReadabilityScore * rubric.criteria[0].weight) / 100;
+                    feedback.push(`📊 Analysis Score: ${codeReadabilityScore}/100`);
+                    feedback.push(...(comprehensiveAnalysis.codeReadability?.feedback || []));
                 }
             } else {
-                // No language data - can't verify
-                conceptsScore -= 10;
-                feedback.push("⚠ Could not verify language usage (GitHub API limit or private repo)");
-            }
-
-            if (repoData.topics && repoData.topics.length > 0) {
-                const skillInTopics = repoData.topics.some((t: string) =>
-                    t.toLowerCase().includes(skill.toLowerCase()) ||
-                    skill.toLowerCase().includes(t.toLowerCase())
-                );
-                if (skillInTopics) {
-                    conceptsScore += 10;
-                    feedback.push(`✓ Repository tagged with ${skill}-related topics`);
+                // Fallback: No comprehensive analysis available (no files or error)
+                // Use minimal scoring based on what we can verify
+                feedback.push("⚠️ Could not perform comprehensive code analysis - using basic validation");
+                feedback.push(...codeQuality.issues);
+                
+                // Give minimal score based on skill match
+                if (codeQuality.skillMatch.matches) {
+                    totalScore = 50; // Base passing score if skill matches
+                } else {
+                    totalScore = 20; // Low score if skill doesn't match
                 }
             }
-
-            // Add code quality feedback
-            feedback.push(...codeQuality.issues);
-            totalScore += (conceptsScore * rubric.criteria[2].weight) / 100;
-
-            // 5. Explanation Clarity / Documentation (20%)
-            let explanationScore = 50;
-            if (readmeContent.length > 1000) {
-                explanationScore += 30;
-                feedback.push("✓ Excellent comprehensive documentation");
-            } else if (readmeContent.length > 500) {
-                explanationScore += 20;
-                feedback.push("✓ Good documentation quality");
-            } else if (readmeContent.length > 100) {
-                explanationScore += 10;
-            }
-            if (repoData.description && repoData.description.length > 50) {
-                explanationScore += 10;
-            }
-            if (repoData.has_pages) {
-                explanationScore += 10;
-                feedback.push("✓ GitHub Pages documentation available");
-            }
-            totalScore += (explanationScore * rubric.criteria[3].weight) / 100;
 
             // Calculate final score
+            // CRITICAL OVERRIDE: If the concepts/language verification found a serious mismatch, force score to 0
+            // This prevents "High Readability" + "High Activity" from masking a "Wrong Language" failure.
+            if (conceptsScore < 0) { // conceptsScore drops below 0 when severe penalties are applied
+                totalScore = 0;
+                feedback.push("❌ Automatic Zero: Repository language mismatch detected during deep analysis.");
+            }
+
             const finalScore = Math.min(100, Math.max(0, Math.round(totalScore)));
             result.score = finalScore;
             result.level = finalScore >= 90 ? "Expert" : finalScore >= 80 ? "Advanced" : finalScore >= 70 ? "Intermediate" : "Beginner";
@@ -1216,14 +1122,19 @@ export async function GET(request: Request) {
 
     } catch (e: any) {
         console.error('Evaluation error:', e);
+
+        // STRICT ERROR HANDLING: Do not fallback for validation errors
+        if (e.message.includes("Invalid URL") || e.message.includes("is required")) {
+            return NextResponse.json({
+                error: e.message,
+                failed: true
+            }, { status: 400 });
+        }
+
         return NextResponse.json({
-            // Fallback mocking if API fails entirely
-            score: 75,
-            level: "Intermediate",
-            feedback: ["Analysis API unreachable, running locally.", "Evidence link valid.", "Skill category matched."],
-            owner: "Unknown",
-            languages: { [skill]: 100 },
-            error: e.message
-        }, { status: 200 }); // Return 200 to not break flow, but show warnings
+            error: e.message || "Evaluation failed",
+            failed: true,
+            feedback: ["❌ Error: " + (e.message || "Internal Server Error")]
+        }, { status: 500 });
     }
 }

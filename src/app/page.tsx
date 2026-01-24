@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, ShieldCheck, Cpu, Code } from "lucide-react";
+import { ShieldCheck, Cpu, Code } from "lucide-react";
 import { motion } from "framer-motion";
 
 import WebcamPixelGrid from "../components/WebcamPixelGrid";
@@ -33,40 +33,7 @@ export default function LandingPage() {
       </div>
       {/* ============================================== */}
 
-      {/* ================= NAVBAR ================= */}
-      <nav className="fixed w-full z-50 bg-black/50 backdrop-blur-md border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="w-8 h-8 text-purple-500" />
-            <span className="text-xl font-bold tracking-tight">
-              EduProof Zero
-            </span>
-          </div>
 
-          <div className="hidden md:flex gap-6 text-sm font-medium text-gray-400">
-            <Link href="#features" className="hover:text-white transition">
-              Features
-            </Link>
-            <Link href="#how-it-works" className="hover:text-white transition">
-              How it Works
-            </Link>
-          </div>
-
-          <div className="flex gap-4">
-            <Link href="/verifier">
-              <button className="px-5 py-2 text-sm font-medium text-gray-300 hover:text-white transition">
-                Verifier Mode
-              </button>
-            </Link>
-            <Link href="/student">
-              <button className="bg-white text-black px-5 py-2 rounded-full text-sm font-bold hover:bg-gray-200 transition flex items-center gap-2">
-                Launch App <ArrowRight className="w-4 h-4" />
-              </button>
-            </Link>
-          </div>
-        </div>
-      </nav>
-      {/* ============================================ */}
 
       {/* ================= HERO ================= */}
       <main className="pt-32 pb-20 relative z-10">
@@ -168,7 +135,7 @@ function FeatureCard({
   return (
     <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl
  hover:border-purple-500/50 transition duration-300 group">
-      
+
       {/* dotted glow background */}
       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
         <DottedGlowBackground
@@ -205,7 +172,7 @@ function StepCard({
   return (
     <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl
  hover:border-purple-500/50 transition duration-300 group">
-      
+
       {/* dotted glow background */}
       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
         <DottedGlowBackground

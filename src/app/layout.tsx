@@ -17,6 +17,10 @@ export const metadata: Metadata = {
   description: "Web3-based system that issues tamper-proof, skill-level credentials backed by real evidence. Verified by AI and stored on Stellar blockchain.",
 };
 
+import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
+import PerformanceMonitor from "../components/PerformanceMonitor";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -27,7 +31,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <PerformanceMonitor />
+        <Navbar />
         {children}
+        <Footer />
       </body>
     </html>
   );

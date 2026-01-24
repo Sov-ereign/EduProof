@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { CheckCircle, Upload, Loader2, Github, FileText, Video, Link as LinkIcon, ExternalLink, AlertCircle, X } from "lucide-react";
 import { connectWallet } from "@/lib/stellar";
+import Certificate from "@/components/Certificate";
 
 const SKILLS = [
     { name: "Python", category: "Tech" },
@@ -29,6 +30,8 @@ export default function StudentDashboard() {
     const [evidenceLink, setEvidenceLink] = useState("");
     const [selectedSkill, setSelectedSkill] = useState("Python");
     const [mintSuccess, setMintSuccess] = useState<any>(null);
+    const [showCertificate, setShowCertificate] = useState(false);
+    const [certificateData, setCertificateData] = useState<any>(null);
 
     useEffect(() => {
         // Try to reconnect wallet on mount
@@ -167,6 +170,26 @@ export default function StudentDashboard() {
             );
 
             setMintSuccess(txResult);
+            
+            // Prepare certificate data
+            const userName = result.owner || wallet?.slice(0, 8) + "..." + wallet?.slice(-4) || "Student";
+            setCertificateData({
+                userName,
+                skill: selectedSkill,
+                level: result.level,
+                score: result.score,
+                date: new Date().toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                }),
+                transactionHash: txResult.hash,
+                explorerUrl: txResult.explorerUrl,
+            });
+            
+            // Show certificate
+            setShowCertificate(true);
+            
             setResult(null); // Clear result to allow new submission
             setEvidenceLink(""); // Clear evidence link
         } catch (e: any) {
@@ -230,22 +253,46 @@ export default function StudentDashboard() {
                             <p className="text-green-300 text-sm mt-1">
                                 Transaction: {mintSuccess.hash?.slice(0, 8)}...{mintSuccess.hash?.slice(-8)}
                             </p>
-                            {mintSuccess.explorerUrl && (
-                                <a
-                                    href={mintSuccess.explorerUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-green-400 hover:text-green-300 text-sm mt-2 inline-flex items-center gap-1"
-                                >
-                                    View on Explorer <ExternalLink className="w-3 h-3" />
-                                </a>
-                            )}
+                            <div className="flex gap-3 mt-3">
+                                {mintSuccess.explorerUrl && (
+                                    <button
+                                        onClick={() => setShowCertificate(true)}
+                                        className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition"
+                                    >
+                                        View Certificate
+                                    </button>
+                                )}
+                                {mintSuccess.explorerUrl && (
+                                    <a
+                                        href={mintSuccess.explorerUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-green-400 hover:text-green-300 text-sm inline-flex items-center gap-1 px-4 py-2 border border-green-500/50 rounded-lg hover:bg-green-500/10 transition"
+                                    >
+                                        View on Explorer <ExternalLink className="w-3 h-3" />
+                                    </a>
+                                )}
+                            </div>
                         </div>
                         <button onClick={() => setMintSuccess(null)} className="text-green-400 hover:text-green-300">
                             <X className="w-4 h-4" />
                         </button>
                     </div>
                 </motion.div>
+            )}
+
+            {/* Certificate Modal */}
+            {showCertificate && certificateData && (
+                <Certificate
+                    userName={certificateData.userName}
+                    skill={certificateData.skill}
+                    level={certificateData.level}
+                    score={certificateData.score}
+                    date={certificateData.date}
+                    transactionHash={certificateData.transactionHash}
+                    explorerUrl={certificateData.explorerUrl}
+                    onClose={() => setShowCertificate(false)}
+                />
             )}
 
             <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
