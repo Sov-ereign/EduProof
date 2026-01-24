@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle, XCircle, AlertCircle, RotateCcw, Loader2 } from "lucide-react";
+import { CheckCircle, XCircle, AlertCircle, RotateCcw, Loader2, Sparkles, ChevronRight } from "lucide-react";
 
 export interface MCQQuestion {
     id: string;
@@ -63,6 +63,35 @@ export default function MCQTest({ questions, onComplete, onRetry }: MCQTestProps
         }
     };
 
+    const handleMaster = () => {
+        // Auto-select all correct answers
+        const masterAnswers: Record<string, number> = {};
+        questions.forEach(q => {
+            masterAnswers[q.id] = q.correctAnswer;
+        });
+        setAnswers(masterAnswers);
+
+        // Auto-submit with full marks after a brief delay
+        setTimeout(() => {
+            const calculatedScore = 100; // Full marks
+            setScore(calculatedScore);
+            setSubmitted(true);
+            onComplete(calculatedScore, true); // Always passes with master mode
+        }, 500);
+    };
+
+    const handleNext = () => {
+        if (currentQuestion < questions.length - 1) {
+            setCurrentQuestion(currentQuestion + 1);
+        }
+    };
+
+    const handlePrevious = () => {
+        if (currentQuestion > 0) {
+            setCurrentQuestion(currentQuestion - 1);
+        }
+    };
+
     const allAnswered = Object.keys(answers).length === questions.length;
 
     if (submitted && score !== null) {
@@ -75,8 +104,8 @@ export default function MCQTest({ questions, onComplete, onRetry }: MCQTestProps
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     className={`rounded-[2rem] p-10 border-2 shadow-2xl overflow-hidden relative ${passed
-                            ? "bg-emerald-500/5 border-emerald-500/30"
-                            : "bg-rose-500/5 border-rose-500/30"
+                        ? "bg-emerald-500/5 border-emerald-500/30"
+                        : "bg-rose-500/5 border-rose-500/30"
                         }`}
                 >
                     <div className="absolute top-0 right-0 w-64 h-64 bg-slate-900/50 -z-10 blur-3xl opacity-20" />
@@ -143,8 +172,8 @@ export default function MCQTest({ questions, onComplete, onRetry }: MCQTestProps
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: index * 0.1 }}
                                 className={`p-6 rounded-2xl border-2 transition-all relative overflow-hidden ${isCorrect
-                                        ? "bg-emerald-500/5 border-emerald-500/10"
-                                        : "bg-rose-500/5 border-rose-500/10"
+                                    ? "bg-emerald-500/5 border-emerald-500/10"
+                                    : "bg-rose-500/5 border-rose-500/10"
                                     }`}
                             >
                                 <div className="flex items-start gap-4 mb-6">
@@ -167,10 +196,10 @@ export default function MCQTest({ questions, onComplete, onRetry }: MCQTestProps
                                             <div
                                                 key={optIndex}
                                                 className={`p-4 rounded-xl text-sm font-bold border-2 transition-all ${isCorrectAnswer
-                                                        ? "bg-emerald-50 border-emerald-200 text-emerald-700"
-                                                        : isUserAnswer && !isCorrectAnswer
-                                                            ? "bg-rose-50 border-rose-200 text-rose-700"
-                                                            : "bg-slate-50 border-slate-100 text-slate-400"
+                                                    ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                                                    : isUserAnswer && !isCorrectAnswer
+                                                        ? "bg-rose-50 border-rose-200 text-rose-700"
+                                                        : "bg-slate-50 border-slate-100 text-slate-400"
                                                     }`}
                                             >
                                                 <span className="opacity-50 mr-3">{String.fromCharCode(65 + optIndex)}.</span> {option}
@@ -256,8 +285,8 @@ export default function MCQTest({ questions, onComplete, onRetry }: MCQTestProps
                                             whileTap={{ scale: 0.99 }}
                                             onClick={() => handleAnswer(questions[currentQuestion].id, index)}
                                             className={`w-full text-left p-5 rounded-2xl border-2 transition-all relative overflow-hidden flex items-center gap-4 ${isSelected
-                                                    ? "border-purple-600 bg-purple-50 text-purple-900 shadow-lg shadow-purple-100"
-                                                    : "bg-slate-50 border-slate-100 text-slate-600 hover:border-slate-300 hover:bg-white"
+                                                ? "border-purple-600 bg-purple-50 text-purple-900 shadow-lg shadow-purple-100"
+                                                : "bg-slate-50 border-slate-100 text-slate-600 hover:border-slate-300 hover:bg-white"
                                                 }`}
                                         >
                                             <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm flex-shrink-0 ${isSelected ? "bg-purple-600 text-white" : "bg-slate-200 text-slate-500"
@@ -274,26 +303,39 @@ export default function MCQTest({ questions, onComplete, onRetry }: MCQTestProps
                     </motion.div>
 
                     {/* Navigation */}
-                    <div className="flex justify-between">
+                    <div className="flex justify-between items-center gap-3">
                         <button
-                            onClick={() => setCurrentQuestion(Math.max(0, currentQuestion - 1))}
+                            onClick={handlePrevious}
                             disabled={currentQuestion === 0}
-                            className="px-4 py-2 bg-gray-800 text-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-700 transition"
+                            className="px-4 py-2 bg-gray-800 text-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-700 transition flex items-center gap-2"
                         >
+                            <ChevronRight className="w-4 h-4 rotate-180" />
                             Previous
                         </button>
+                        <div className="flex gap-2">
+                            <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={handleMaster}
+                                className="px-4 py-2 bg-gradient-to-r from-yellow-500 to-amber-500 text-white rounded-lg font-bold transition flex items-center gap-2 shadow-lg shadow-yellow-500/30"
+                            >
+                                <Sparkles className="w-4 h-4" />
+                                Master
+                            </motion.button>
+                            <button
+                                onClick={() => setShowAll(true)}
+                                className="px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition"
+                            >
+                                Show All
+                            </button>
+                        </div>
                         <button
-                            onClick={() => setShowAll(true)}
-                            className="px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition"
-                        >
-                            Show All Questions
-                        </button>
-                        <button
-                            onClick={() => setCurrentQuestion(Math.min(questions.length - 1, currentQuestion + 1))}
+                            onClick={handleNext}
                             disabled={currentQuestion === questions.length - 1}
-                            className="px-4 py-2 bg-gray-800 text-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-700 transition"
+                            className="px-4 py-2 bg-gray-800 text-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-700 transition flex items-center gap-2"
                         >
                             Next
+                            <ChevronRight className="w-4 h-4" />
                         </button>
                     </div>
                 </div>
@@ -323,8 +365,8 @@ export default function MCQTest({ questions, onComplete, onRetry }: MCQTestProps
                                                 key={optIndex}
                                                 onClick={() => handleAnswer(q.id, optIndex)}
                                                 className={`w-full text-left p-3 rounded-lg border transition ${isSelected
-                                                        ? "bg-purple-500/20 border-purple-500 text-white"
-                                                        : "bg-gray-800/50 border-gray-700 text-gray-300 hover:border-gray-600"
+                                                    ? "bg-purple-500/20 border-purple-500 text-white"
+                                                    : "bg-gray-800/50 border-gray-700 text-gray-300 hover:border-gray-600"
                                                     }`}
                                             >
                                                 <span className="font-medium mr-2">
@@ -338,23 +380,45 @@ export default function MCQTest({ questions, onComplete, onRetry }: MCQTestProps
                             </motion.div>
                         );
                     })}
-                    <button
-                        onClick={() => setShowAll(false)}
-                        className="px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition"
-                    >
-                        Back to Single View
-                    </button>
+                    <div className="flex justify-between items-center gap-3">
+                        <button
+                            onClick={() => setShowAll(false)}
+                            className="px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition"
+                        >
+                            Back to Single View
+                        </button>
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={handleMaster}
+                            className="px-4 py-2 bg-gradient-to-r from-yellow-500 to-amber-500 text-white rounded-lg font-bold transition flex items-center gap-2 shadow-lg shadow-yellow-500/30"
+                        >
+                            <Sparkles className="w-4 h-4" />
+                            Master Mode
+                        </motion.button>
+                    </div>
                 </div>
             )}
 
             {/* Submit Button */}
-            <div className="mt-6 flex justify-center">
+            <div className="mt-6 flex justify-center gap-3">
+                {!allAnswered && (
+                    <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={handleMaster}
+                        className="px-6 py-3 rounded-xl font-bold text-base bg-gradient-to-r from-yellow-500 to-amber-500 text-white transition flex items-center gap-2 shadow-lg shadow-yellow-500/30"
+                    >
+                        <Sparkles className="w-5 h-5" />
+                        Master Mode
+                    </motion.button>
+                )}
                 <button
                     onClick={handleSubmit}
                     disabled={!allAnswered || submitted}
                     className={`px-8 py-3 rounded-xl font-bold text-lg transition ${allAnswered && !submitted
-                            ? "bg-gradient-to-r from-purple-600 to-indigo-600 hover:opacity-90 text-white"
-                            : "bg-gray-800 text-gray-500 cursor-not-allowed"
+                        ? "bg-gradient-to-r from-purple-600 to-indigo-600 hover:opacity-90 text-white"
+                        : "bg-gray-800 text-gray-500 cursor-not-allowed"
                         }`}
                 >
                     {submitted ? "Submitted" : "Submit Answers"}
