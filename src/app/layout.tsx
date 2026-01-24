@@ -1,11 +1,15 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({
+const geistSans = Geist({
+  variable: "--font-geist-sans",
   subsets: ["latin"],
-  variable: "--font-sans",
-  display: "swap",
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
@@ -17,6 +21,8 @@ import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import PerformanceMonitor from "../components/PerformanceMonitor";
 
+import { Providers } from "@/components/Providers";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -25,12 +31,14 @@ export default function RootLayout({
   return (
     <html lang="en" data-scroll-behavior="smooth">
       <body
-        className={`${inter.variable} font-sans antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <PerformanceMonitor />
-        <Navbar />
-        {children}
-        <Footer />
+        <Providers>
+          <PerformanceMonitor />
+          <Navbar />
+          {children}
+          <Footer />
+        </Providers>
       </body>
     </html>
   );

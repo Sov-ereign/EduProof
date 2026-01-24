@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Search, ShieldCheck, ExternalLink, User, AlertCircle, CheckCircle2, X, Loader2, Award, TrendingUp } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import ScrollReveal from "@/components/ScrollReveal";
+import { Search, ShieldCheck, ExternalLink, User, AlertCircle, CheckCircle2, X, Loader2 } from "lucide-react";
+import { motion } from "framer-motion";
 
 const LEVEL_COLORS: Record<string, string> = {
     Beginner: "bg-blue-500/20 text-blue-400 border-blue-500/30",
@@ -45,230 +44,176 @@ export default function VerifierDashboard() {
         return LEVEL_COLORS[level] || LEVEL_COLORS.Verified;
     };
 
+
     return (
-        <div className="min-h-screen bg-black text-white relative overflow-hidden">
-            {/* Background gradient */}
-            <div className="fixed inset-0 bg-gradient-to-b from-black via-indigo-950/5 to-black -z-10" />
-            
-            <div className="container-custom max-w-6xl mx-auto px-4 sm:px-6 py-12 md:py-16">
-                {/* Header */}
-                <ScrollReveal direction="down" threshold={0.1}>
-                    <header className="text-center mb-12 md:mb-16">
-                        <div className="inline-flex items-center gap-3 mb-6">
-                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-indigo-500/20 border border-purple-500/30 flex items-center justify-center">
-                                <ShieldCheck className="w-7 h-7 text-purple-400" />
-                            </div>
-                            <div className="text-left">
-                                <h1 className="text-3xl md:text-4xl font-bold gradient-text-purple">EduProof Verifier</h1>
-                                <p className="text-sm text-gray-400">Zero-trust credential verification</p>
-                            </div>
-                        </div>
-                    </header>
-                </ScrollReveal>
-
-                {/* Hero Section */}
-                <ScrollReveal direction="up" threshold={0.2}>
-                    <div className="text-center mb-12">
-                        <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
-                            Verify a <span className="gradient-text-purple">Candidate</span>
-                        </h2>
-                        <p className="text-lg md:text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed">
-                            Enter a Stellar wallet address to view their on-chain, tamper-proof skill credentials.
-                            No login required. No trust required.
-                        </p>
+        <div className="min-h-screen bg-black text-white p-6 md:p-12">
+            <header className="flex justify-between items-center mb-12 border-b border-gray-800 pb-6">
+                <div className="flex items-center gap-3">
+                    <ShieldCheck className="w-8 h-8 text-purple-500" />
+                    <div>
+                        <span className="text-xl font-bold">EduProof Verifier</span>
+                        <p className="text-sm text-gray-400">Zero-trust credential verification</p>
                     </div>
-                </ScrollReveal>
+                </div>
+            </header>
 
-                {/* Search Section */}
-                <ScrollReveal direction="up" delay={0.2} threshold={0.2}>
-                    <div className="relative mb-12 max-w-3xl mx-auto">
-                        <div className="relative group">
-                            <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl blur-lg opacity-20 group-hover:opacity-30 transition duration-1000" />
-                            <div className="relative">
-                                <Search className="absolute left-6 top-5 text-gray-500 w-6 h-6 group-focus-within:text-purple-400 transition-colors" />
-                                <input
-                                    type="text"
-                                    placeholder="Paste Stellar Wallet Address (e.g. GCA7...)"
-                                    className="w-full bg-black/40 border border-white/10 rounded-2xl py-5 pl-14 pr-36 text-lg focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all text-white placeholder-gray-500"
-                                    value={search}
-                                    onChange={(e) => {
-                                        setSearch(e.target.value);
-                                        setError("");
-                                    }}
-                                    onKeyDown={(e) => e.key === 'Enter' && !loading && handleSearch()}
-                                />
-                                <motion.button
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={handleSearch}
-                                    disabled={loading || !search.trim()}
-                                    className={`absolute right-2 top-2 bottom-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:opacity-90 text-white px-8 rounded-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg ${
-                                        !loading && search.trim() ? "hover:shadow-purple-500/50" : ""
-                                    }`}
-                                >
-                                    {loading ? (
-                                        <>
-                                            <Loader2 className="w-5 h-5 animate-spin" />
-                                            Searching...
-                                        </>
-                                    ) : (
-                                        "Verify"
-                                    )}
-                                </motion.button>
-                            </div>
+            <main className="max-w-4xl mx-auto">
+                <div className="text-center mb-12">
+                    <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-white to-gray-600 bg-clip-text text-transparent">
+                        Verify a Candidate
+                    </h1>
+                    <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+                        Enter a Stellar wallet address to view their on-chain, tamper-proof skill credentials.
+                        No login required. No trust required.
+                    </p>
+                </div>
+
+                <div className="relative mb-12">
+                    <Search className="absolute left-4 top-4 text-gray-500 w-5 h-5" />
+                    <input
+                        type="text"
+                        placeholder="Paste Stellar Wallet Address (e.g. GCA7...)"
+                        className="w-full bg-gray-900 border border-gray-700 rounded-2xl py-4 pl-12 pr-32 text-lg focus:outline-none focus:border-purple-500 transition shadow-xl text-white"
+                        value={search}
+                        onChange={(e) => {
+                            setSearch(e.target.value);
+                            setError("");
+                        }}
+                        onKeyDown={(e) => e.key === 'Enter' && !loading && handleSearch()}
+                    />
+                    <button
+                        onClick={handleSearch}
+                        disabled={loading || !search.trim()}
+                        className={`absolute right-2 top-2 bg-white text-black font-bold px-6 py-2 rounded-xl transition flex items-center gap-2 ${
+                            loading || !search.trim()
+                                ? "opacity-50 cursor-not-allowed"
+                                : "hover:bg-gray-200"
+                        }`}
+                    >
+                        {loading ? (
+                            <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Searching...
+                            </>
+                        ) : (
+                            "Verify"
+                        )}
+                    </button>
+                </div>
+
+                {loading && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="text-center py-16"
+                    >
+                        <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                        <p className="text-gray-400 font-medium">Scanning Stellar Ledger...</p>
+                        <p className="text-gray-500 text-sm mt-2">Querying on-chain credentials</p>
+                    </motion.div>
+                )}
+
+                {error && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-red-500/10 border border-red-500/50 p-4 rounded-xl mb-8 flex items-start gap-3"
+                    >
+                        <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                            <p className="text-red-400 font-medium">Verification Failed</p>
+                            <p className="text-red-300 text-sm">{error}</p>
                         </div>
-                    </div>
-                </ScrollReveal>
+                        <button onClick={() => setError("")} className="text-red-400 hover:text-red-300">
+                            <X className="w-4 h-4" />
+                        </button>
+                    </motion.div>
+                )}
 
-                {/* Loading State */}
-                <AnimatePresence>
-                    {loading && (
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            className="text-center py-20"
-                        >
-                            <motion.div
-                                animate={{ rotate: 360 }}
-                                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                                className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full mx-auto mb-6 shadow-lg shadow-purple-500/30"
-                            />
-                            <p className="text-purple-400 font-semibold text-lg mb-2">Scanning Stellar Ledger...</p>
-                            <p className="text-gray-500 text-sm">Querying on-chain credentials</p>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-
-                {/* Error State */}
-                <AnimatePresence>
-                    {error && (
-                        <motion.div
-                            initial={{ opacity: 0, y: -10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
-                            className="mb-8 bg-red-500/10 border border-red-500/50 p-4 rounded-xl flex items-start gap-3 backdrop-blur-sm"
-                        >
-                            <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                {result && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="space-y-6"
+                    >
+                        <div className="flex items-center gap-4 p-6 bg-gray-900 rounded-xl border border-gray-800">
+                            <div className="bg-gray-800 p-4 rounded-full">
+                                <User className="w-6 h-6 text-gray-400" />
+                            </div>
                             <div className="flex-1">
-                                <p className="text-red-400 font-semibold mb-1">Verification Failed</p>
-                                <p className="text-red-300 text-sm">{error}</p>
+                                <p className="text-sm text-gray-500 mb-1">Wallet Identity</p>
+                                <p className="font-mono text-purple-400 text-lg">{result.address}</p>
                             </div>
-                            <button onClick={() => setError("")} className="text-red-400 hover:text-red-300 transition-colors">
-                                <X className="w-4 h-4" />
-                            </button>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                            <div className="text-right">
+                                <div className="text-2xl font-bold text-white">{result.credentials.length}</div>
+                                <div className="text-xs text-gray-500 uppercase tracking-wider">Credentials</div>
+                            </div>
+                        </div>
 
-                {/* Results */}
-                <AnimatePresence>
-                    {result && (
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 20 }}
-                            className="space-y-8"
-                        >
-                            {/* Wallet Info Card */}
-                            <ScrollReveal direction="up" threshold={0.2}>
-                                <div className="glass-strong rounded-2xl border border-white/10 p-6 md:p-8">
-                                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-                                        <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-purple-500/20 to-indigo-500/20 border border-purple-500/30 flex items-center justify-center flex-shrink-0">
-                                            <User className="w-8 h-8 text-purple-400" />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm text-gray-400 mb-2 font-medium uppercase tracking-wider">Wallet Identity</p>
-                                            <p className="font-mono text-purple-400 text-lg md:text-xl break-all">{result.address}</p>
-                                        </div>
-                                        <div className="text-center sm:text-right">
-                                            <div className="text-4xl md:text-5xl font-bold text-white mb-1">{result.credentials.length}</div>
-                                            <div className="text-xs text-gray-500 uppercase tracking-wider">Credentials</div>
-                                        </div>
-                                    </div>
+                        {result.credentials.length === 0 ? (
+                            <div className="text-center py-16 bg-gray-900/50 rounded-xl border border-gray-800">
+                                <ShieldCheck className="w-16 h-16 mx-auto mb-4 text-gray-600 opacity-50" />
+                                <p className="text-gray-400 text-lg mb-2">No credentials found</p>
+                                <p className="text-gray-500 text-sm">This wallet has no verified skill credentials yet.</p>
+                            </div>
+                        ) : (
+                            <>
+                                <h2 className="text-2xl font-bold mb-4">Verified Skills</h2>
+                                <div className="grid gap-4">
+                                    {result.credentials.map((cred: any) => (
+                                        <motion.div
+                                            key={cred.id}
+                                            initial={{ opacity: 0, scale: 0.95 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            className="bg-gradient-to-r from-gray-900 to-black border border-gray-800 p-6 rounded-xl hover:border-purple-500/50 transition duration-300"
+                                        >
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div className="flex-1">
+                                                    <h3 className="text-2xl font-bold text-white mb-2">{cred.skill}</h3>
+                                                    <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getLevelColor(cred.level)}`}>
+                                                        {cred.level}
+                                                    </span>
+                                                </div>
+                                                <div className="text-right ml-4">
+                                                    <div className="text-4xl font-bold text-white mb-1">{cred.score}</div>
+                                                    <div className="text-xs text-gray-500 uppercase tracking-wider">Score</div>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center gap-4 text-sm text-gray-400 border-t border-gray-800 pt-4 mt-4 flex-wrap">
+                                                <span className="flex items-center gap-1">
+                                                    <CheckCircle2 className="w-4 h-4 text-green-400" />
+                                                    Minted: {cred.date}
+                                                </span>
+                                                {cred.evidence && (
+                                                    <a
+                                                        href={cred.evidence}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="flex items-center gap-1 hover:text-white transition text-purple-400"
+                                                    >
+                                                        View Evidence <ExternalLink className="w-3 h-3" />
+                                                    </a>
+                                                )}
+                                                {cred.txHash && (
+                                                    <a
+                                                        href={`https://stellar.expert/explorer/testnet/tx/${cred.txHash}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="ml-auto flex items-center gap-1 hover:text-purple-300 transition text-purple-400"
+                                                    >
+                                                        View on Explorer <ExternalLink className="w-3 h-3" />
+                                                    </a>
+                                                )}
+                                            </div>
+                                        </motion.div>
+                                    ))}
                                 </div>
-                            </ScrollReveal>
-
-                            {/* Credentials List */}
-                            {result.credentials.length === 0 ? (
-                                <ScrollReveal direction="up" threshold={0.2}>
-                                    <div className="text-center py-20 glass-strong rounded-2xl border border-white/10">
-                                        <div className="w-20 h-20 rounded-full bg-gray-800/50 mx-auto mb-6 flex items-center justify-center">
-                                            <ShieldCheck className="w-10 h-10 text-gray-600" />
-                                        </div>
-                                        <p className="text-gray-400 text-xl mb-2 font-semibold">No credentials found</p>
-                                        <p className="text-gray-500 text-sm">This wallet has no verified skill credentials yet.</p>
-                                    </div>
-                                </ScrollReveal>
-                            ) : (
-                                <>
-                                    <h2 className="text-2xl md:text-3xl font-bold mb-6">Verified Skills</h2>
-                                    <div className="grid gap-6">
-                                        {result.credentials.map((cred: any, index: number) => (
-                                            <ScrollReveal
-                                                key={cred.id}
-                                                direction="up"
-                                                delay={index * 0.1}
-                                                threshold={0.2}
-                                            >
-                                                <motion.div
-                                                    whileHover={{ y: -4, scale: 1.01 }}
-                                                    className="glass-strong rounded-2xl border border-white/10 p-6 md:p-8 hover:border-purple-500/50 transition-all duration-300 group"
-                                                >
-                                                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-6">
-                                                        <div className="flex-1">
-                                                            <div className="flex items-center gap-3 mb-3">
-                                                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 border border-green-500/30 flex items-center justify-center">
-                                                                    <Award className="w-6 h-6 text-green-400" />
-                                                                </div>
-                                                                <h3 className="text-2xl md:text-3xl font-bold text-white">{cred.skill}</h3>
-                                                            </div>
-                                                            <span className={`inline-block px-4 py-1.5 rounded-full text-sm font-semibold border ${getLevelColor(cred.level)}`}>
-                                                                {cred.level}
-                                                            </span>
-                                                        </div>
-                                                        <div className="text-center md:text-right">
-                                                            <div className="text-4xl md:text-5xl font-bold text-white mb-1">{cred.score}</div>
-                                                            <div className="text-xs text-gray-500 uppercase tracking-wider">Score</div>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="flex flex-wrap items-center gap-4 text-sm text-gray-400 border-t border-white/10 pt-6">
-                                                        <span className="flex items-center gap-2">
-                                                            <CheckCircle2 className="w-4 h-4 text-green-400" />
-                                                            Minted: {cred.date}
-                                                        </span>
-                                                        {cred.evidence && (
-                                                            <a
-                                                                href={cred.evidence}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                className="flex items-center gap-2 hover:text-purple-400 transition-colors text-purple-400"
-                                                            >
-                                                                View Evidence <ExternalLink className="w-4 h-4" />
-                                                            </a>
-                                                        )}
-                                                        {cred.txHash && (
-                                                            <a
-                                                                href={`https://stellar.expert/explorer/testnet/tx/${cred.txHash}`}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                className="ml-auto flex items-center gap-2 hover:text-purple-300 transition-colors text-purple-400"
-                                                            >
-                                                                View on Explorer <ExternalLink className="w-4 h-4" />
-                                                            </a>
-                                                        )}
-                                                    </div>
-                                                </motion.div>
-                                            </ScrollReveal>
-                                        ))}
-                                    </div>
-                                </>
-                            )}
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </div>
+                            </>
+                        )}
+                    </motion.div>
+                )}
+            </main>
         </div>
     );
 }
