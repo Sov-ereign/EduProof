@@ -24,7 +24,9 @@ async function getAvailableModel(): Promise<string> {
         'tngtech/deepseek-r1t2-chimera:free',      // Primary model (free tier)
         'mistralai/mistral-7b-instruct:free',      // Fallback (free tier)
     ];
-    
+
+    let lastError = null;
+
     for (const modelName of modelsToTry) {
         try {
             // Test with a tiny prompt
@@ -48,6 +50,7 @@ async function getAvailableModel(): Promise<string> {
             }
         } catch (e: any) {
             console.log(`⚠️ Model ${modelName} not available, trying next...`);
+            lastError = e;
             continue;
         }
     }
@@ -85,6 +88,21 @@ async function callOpenRouter(model: string, messages: Array<{ role: string; con
     return data.choices[0]?.message?.content || '';
 }
 
+export interface RepoAnalysis {
+    files: Array<{ path: string; content: string; extension: string }>;
+    readme: string;
+    languages: Record<string, number>;
+    skill: string;
+    owner: string;
+    repositoryInfo?: {
+        name: string;
+        fullName: string;
+        description: string;
+        stars: number;
+        forks: number;
+    };
+}
+
 export interface MCQQuestion {
     id: string;
     question: string;
@@ -99,24 +117,11 @@ export interface CodingChallenge {
     description: string;
     functionSignature: string;
     testCases: Array<{
-        input: any[];
+        input: any;
         expectedOutput: any;
         description?: string;
     }>;
     starterCode?: string;
-}
-
-export interface RepoAnalysis {
-    files: Array<{
-        path: string;
-        content: string;
-        extension: string;
-    }>;
-    readme?: string;
-    languages?: Record<string, number>;
-    skill: string;
-    owner?: string;
-    repositoryInfo?: any;
 }
 
 /**
@@ -130,48 +135,37 @@ export async function generateMCQs(
     // Get an available model
     const model = await getAvailableModel();
 
-    // Prepare repository context for prompt
-    const fileSummaries = repoAnalysis.files.slice(0, 5).map(file => {
-        const preview = file.content.substring(0, 500); // First 500 chars
-        return `File: ${file.path}\nPreview:\n${preview}...`;
-    }).join('\n\n');
+    // Prepare repository context
+    const fileExcerpts = repoAnalysis.files.slice(0, 10).map(f => 
+        `File: ${f.path}\nContent:\n${f.content.substring(0, 1000)}`
+    ).join('\n\n');
 
     const readmeContext = repoAnalysis.readme 
         ? `\n\nREADME:\n${repoAnalysis.readme.substring(0, 1000)}`
         : '';
 
-    const prompt = `You are an expert technical interviewer. Based on the following code repository analysis, generate exactly ${count} multiple-choice questions that test understanding of:
+    const prompt = `You are an expert technical interviewer for ${skill}.
+Based on the following repository context, generate ${count} high-quality multiple-choice questions.
+The questions should test deep understanding of the concepts used in THIS SPECIFIC codebase, not just general ${skill} knowledge.
 
-1. Code structure and patterns used in the repository
-2. Key concepts and features demonstrated
-3. Logic and implementation details
-4. Best practices and coding standards shown
-
-Repository Context:
+REPOSITORY CONTEXT:
 Skill: ${skill}
-Files Analyzed:
-${fileSummaries}
 ${readmeContext}
+Top Languages: ${JSON.stringify(repoAnalysis.languages)}
+Code Samples:
+${fileExcerpts}
 
-Requirements:
-- Each question should have exactly 4 options (A, B, C, D)
-- Questions should be based on actual code patterns, concepts, or logic found in the repository
-- Make questions progressively more challenging
-- Include a mix of conceptual and practical questions
-- One option should be clearly correct, others should be plausible but incorrect
-
-Return ONLY a valid JSON array in this exact format (no markdown, no code blocks):
+FORMAT REQUIREMENTS:
+Return ONLY a JSON array of objects with the following structure:
 [
-  {
-    "question": "Question text here?",
-    "options": ["Option A", "Option B", "Option C", "Option D"],
-    "correctAnswer": 0,
-    "explanation": "Brief explanation of why this is correct"
-  },
-  ...
-]
-
-Generate exactly ${count} questions.`;
+    {
+        "id": "q1",
+        "question": "The question text...",
+        "options": ["Option A", "Option B", "Option C", "Option D"],
+        "correctAnswer": 0,
+        "explanation": "Brief explanation of why this is correct based on the code or best practices."
+    }
+]`;
 
     try {
         const text = await callOpenRouter(model, [
@@ -320,4 +314,3 @@ Generate exactly ${count} challenges.`;
         throw new Error(`Failed to generate coding challenges: ${error.message}`);
     }
 }
-

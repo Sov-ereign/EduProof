@@ -196,35 +196,55 @@ export default function TestFlowContainer({ repoAnalysis, skill, onComplete }: T
     return (
         <div className="w-full space-y-6">
             {/* Progress Indicator */}
-            <div className="bg-gray-900/50 rounded-xl p-4 border border-gray-800">
-                <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-4">
-                        <div className={`flex items-center gap-2 ${
-                            phase === "mcq" || phase === "coding" || phase === "completed"
-                                ? "text-green-400"
-                                : "text-gray-500"
-                        }`}>
-                            <FileQuestion className="w-5 h-5" />
-                            <span className="text-sm font-medium">MCQ Test</span>
+            <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-6 border border-slate-200/50 shadow-2xl shadow-slate-900/5 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-50/50 via-transparent to-indigo-50/50 -z-10" />
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+                    <div className="flex items-center gap-6">
+                        <div className={`flex items-center gap-3 transition-all duration-500 ${phase === "mcq" || phase === "coding" || phase === "completed"
+                                ? "text-purple-600 scale-105"
+                                : "text-slate-400 grayscale"
+                            }`}>
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${phase === "mcq" ? "bg-purple-600 text-white shadow-lg shadow-purple-200" : "bg-slate-100"
+                                }`}>
+                                <FileQuestion className="w-5 h-5" />
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">Phase I</span>
+                                <span className="text-sm font-black tracking-tight">Theory Aptitude</span>
+                            </div>
                             {phase !== "preparing" && phase !== "mcq" && (
-                                <CheckCircle className="w-4 h-4" />
+                                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
+                                    <CheckCircle className="w-5 h-5 text-emerald-500" fill="currentColor" />
+                                </motion.div>
                             )}
                         </div>
-                        <div className="w-8 h-0.5 bg-gray-700" />
-                        <div className={`flex items-center gap-2 ${
-                            phase === "coding" || phase === "completed"
-                                ? "text-green-400"
-                                : "text-gray-500"
-                        }`}>
-                            <Code className="w-5 h-5" />
-                            <span className="text-sm font-medium">Coding Challenges</span>
+
+                        <div className="hidden sm:block w-12 h-px bg-slate-200" />
+
+                        <div className={`flex items-center gap-3 transition-all duration-500 ${phase === "coding" || phase === "completed"
+                                ? "text-indigo-600 scale-105"
+                                : "text-slate-400 grayscale"
+                            }`}>
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${phase === "coding" ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200" : "bg-slate-100"
+                                }`}>
+                                <Code className="w-5 h-5" />
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">Phase II</span>
+                                <span className="text-sm font-black tracking-tight">Active Execution</span>
+                            </div>
                             {phase === "completed" && (
-                                <CheckCircle className="w-4 h-4" />
+                                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
+                                    <CheckCircle className="w-5 h-5 text-emerald-500" fill="currentColor" />
+                                </motion.div>
                             )}
                         </div>
                     </div>
                     {mcqScore !== null && (
-                        <span className="text-sm text-gray-400">MCQ Score: {mcqScore}%</span>
+                        <div className="bg-slate-900 text-white px-4 py-2 rounded-xl border border-slate-800 shadow-lg">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 block">Performance</span>
+                            <span className="text-sm font-black font-mono">{mcqScore}% MCQ Accuracy</span>
+                        </div>
                     )}
                 </div>
             </div>
@@ -264,13 +284,12 @@ export default function TestFlowContainer({ repoAnalysis, skill, onComplete }: T
                                 {codingChallenges.map((_, idx) => (
                                     <div
                                         key={idx}
-                                        className={`w-3 h-3 rounded-full ${
-                                            idx < currentChallengeIndex
+                                        className={`w-3 h-3 rounded-full ${idx < currentChallengeIndex
                                                 ? "bg-green-500"
                                                 : idx === currentChallengeIndex
-                                                ? "bg-purple-500"
-                                                : "bg-gray-700"
-                                        }`}
+                                                    ? "bg-purple-500"
+                                                    : "bg-gray-700"
+                                            }`}
                                     />
                                 ))}
                             </div>
