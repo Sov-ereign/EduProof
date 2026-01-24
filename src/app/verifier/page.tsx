@@ -5,11 +5,11 @@ import { Search, ShieldCheck, ExternalLink, User, AlertCircle, CheckCircle2, X, 
 import { motion } from "framer-motion";
 
 const LEVEL_COLORS: Record<string, string> = {
-    Beginner: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-    Intermediate: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-    Advanced: "bg-orange-500/20 text-orange-400 border-orange-500/30",
-    Expert: "bg-purple-500/20 text-purple-400 border-purple-500/30",
-    Verified: "bg-green-500/20 text-green-400 border-green-500/30",
+    Beginner: "bg-blue-50 text-blue-700 border-blue-100",
+    Intermediate: "bg-amber-50 text-amber-700 border-amber-100",
+    Advanced: "bg-orange-50 text-orange-700 border-orange-100",
+    Expert: "bg-purple-50 text-purple-700 border-purple-100",
+    Verified: "bg-emerald-50 text-emerald-700 border-emerald-100",
 };
 
 export default function VerifierDashboard() {
@@ -46,70 +46,77 @@ export default function VerifierDashboard() {
 
 
     return (
-        <div className="min-h-screen bg-black text-white p-6 md:p-12">
-            <header className="flex justify-between items-center mb-12 border-b border-gray-800 pb-6">
-                <div className="flex items-center gap-3">
-                    <ShieldCheck className="w-8 h-8 text-purple-500" />
+        <div className="min-h-screen bg-slate-50 text-slate-900 p-6 md:p-12">
+            {/* <header className="flex justify-between items-center mb-12 border-b border-slate-200 pb-8">
+                <div className="flex items-center gap-4">
+                    <div className="bg-purple-600 p-2 rounded-xl shadow-lg shadow-purple-100">
+                        <ShieldCheck className="w-8 h-8 text-white" />
+                    </div>
                     <div>
-                        <span className="text-xl font-bold">EduProof Verifier</span>
-                        <p className="text-sm text-gray-400">Zero-trust credential verification</p>
+                        <span className="text-3xl font-black tracking-tight text-slate-900">EduProof <span className="text-purple-600">Verifier</span></span>
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Zero-Trust Credential Validation</p>
                     </div>
                 </div>
-            </header>
+            </header> */}
 
-            <main className="max-w-4xl mx-auto">
-                <div className="text-center mb-12">
-                    <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-white to-gray-600 bg-clip-text text-transparent">
-                        Verify a Candidate
+            <main className="max-w-4xl mx-auto mt-20">
+                <div className="text-center mb-20">
+                    <h1 className="text-5xl md:text-6xl font-black mb-6 tracking-tight text-slate-900">
+                        Verify a Candidate.
                     </h1>
-                    <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+                    <p className="text-slate-500 text-lg font-medium max-w-2xl mx-auto leading-relaxed">
                         Enter a Stellar wallet address to view their on-chain, tamper-proof skill credentials.
-                        No login required. No trust required.
+                        No login required. No trust required. No centralized gatekeepers.
                     </p>
                 </div>
 
-                <div className="relative mb-12">
-                    <Search className="absolute left-4 top-4 text-gray-500 w-5 h-5" />
-                    <input
-                        type="text"
-                        placeholder="Paste Stellar Wallet Address (e.g. GCA7...)"
-                        className="w-full bg-gray-900 border border-gray-700 rounded-2xl py-4 pl-12 pr-32 text-lg focus:outline-none focus:border-purple-500 transition shadow-xl text-white"
-                        value={search}
-                        onChange={(e) => {
-                            setSearch(e.target.value);
-                            setError("");
-                        }}
-                        onKeyDown={(e) => e.key === 'Enter' && !loading && handleSearch()}
-                    />
-                    <button
-                        onClick={handleSearch}
-                        disabled={loading || !search.trim()}
-                        className={`absolute right-2 top-2 bg-white text-black font-bold px-6 py-2 rounded-xl transition flex items-center gap-2 ${
-                            loading || !search.trim()
-                                ? "opacity-50 cursor-not-allowed"
-                                : "hover:bg-gray-200"
-                        }`}
-                    >
-                        {loading ? (
-                            <>
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                Searching...
-                            </>
-                        ) : (
-                            "Verify"
-                        )}
-                    </button>
+                <div className="relative mb-20 max-w-2xl mx-auto">
+                    <div className="relative group">
+                        <div className="absolute -inset-1 bg-gradient-to-r from-purple-500/20 to-indigo-500/20 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition duration-1000"></div>
+                        <Search className="absolute left-6 top-7 text-slate-400 w-6 h-6 z-10" />
+                        <input
+                            type="text"
+                            placeholder="Stellar Wallet Address (G...)"
+                            className="relative w-full bg-white border-2 border-slate-100 rounded-[1.5rem] py-6 pl-14 pr-40 text-slate-900 text-lg font-bold placeholder:text-slate-300 focus:outline-none focus:border-purple-600 transition-all shadow-xl shadow-slate-200/50"
+                            value={search}
+                            onChange={(e) => {
+                                setSearch(e.target.value);
+                                setError("");
+                            }}
+                            onKeyDown={(e) => e.key === 'Enter' && !loading && handleSearch()}
+                        />
+                        <button
+                            onClick={handleSearch}
+                            disabled={loading || !search.trim()}
+                            className="absolute right-3 top-3 bottom-3 bg-slate-900 hover:bg-slate-800 text-white px-8 rounded-xl font-black text-sm tracking-widest transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg active:scale-95"
+                        >
+                            {loading ? (
+                                <>
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                    <span>QUERYING...</span>
+                                </>
+                            ) : (
+                                "VERIFY"
+                            )}
+                        </button>
+                    </div>
                 </div>
 
                 {loading && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        className="text-center py-16"
+                        className="text-center py-24"
                     >
-                        <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                        <p className="text-gray-400 font-medium">Scanning Stellar Ledger...</p>
-                        <p className="text-gray-500 text-sm mt-2">Querying on-chain credentials</p>
+                        <div className="relative w-24 h-24 mx-auto mb-8">
+                            <motion.div
+                                animate={{ rotate: 360 }}
+                                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                                className="absolute inset-0 border-4 border-purple-100 border-t-purple-600 rounded-full"
+                            />
+                        </div>
+                        <p className="text-slate-900 font-bold text-xl mb-2">Scanning Stellar Ledger...</p>
+                        <p className="text-slate-500 font-medium tracking-tight">Accessing immutable evidence pools</p>
                     </motion.div>
                 )}
 
@@ -117,15 +124,17 @@ export default function VerifierDashboard() {
                     <motion.div
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="bg-red-500/10 border border-red-500/50 p-4 rounded-xl mb-8 flex items-start gap-3"
+                        className="bg-red-50 border-2 border-red-100 p-6 rounded-3xl mb-12 flex items-start gap-4"
                     >
-                        <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                        <div className="flex-1">
-                            <p className="text-red-400 font-medium">Verification Failed</p>
-                            <p className="text-red-300 text-sm">{error}</p>
+                        <div className="bg-red-500 p-2 rounded-xl">
+                            <AlertCircle className="w-6 h-6 text-white" />
                         </div>
-                        <button onClick={() => setError("")} className="text-red-400 hover:text-red-300">
-                            <X className="w-4 h-4" />
+                        <div className="flex-1">
+                            <p className="text-red-900 font-bold text-lg">Verification Failed</p>
+                            <p className="text-red-600 font-medium">{error}</p>
+                        </div>
+                        <button onClick={() => setError("")} className="text-red-400 hover:text-red-600">
+                            <X className="w-6 h-6" />
                         </button>
                     </motion.div>
                 )}
@@ -134,55 +143,60 @@ export default function VerifierDashboard() {
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="space-y-6"
+                        className="space-y-10"
                     >
-                        <div className="flex items-center gap-4 p-6 bg-gray-900 rounded-xl border border-gray-800">
-                            <div className="bg-gray-800 p-4 rounded-full">
-                                <User className="w-6 h-6 text-gray-400" />
+                        <div className="flex items-center gap-6 p-8 bg-white rounded-[2rem] border-2 border-slate-100 shadow-sm">
+                            <div className="bg-slate-100 p-5 rounded-2xl">
+                                <User className="w-8 h-8 text-slate-400" />
                             </div>
-                            <div className="flex-1">
-                                <p className="text-sm text-gray-500 mb-1">Wallet Identity</p>
-                                <p className="font-mono text-purple-400 text-lg">{result.address}</p>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-xs font-bold text-slate-400 mb-1 uppercase tracking-widest">Candidate Identity</p>
+                                <p className="font-mono text-purple-600 text-lg md:text-xl font-bold truncate">{result.address}</p>
                             </div>
-                            <div className="text-right">
-                                <div className="text-2xl font-bold text-white">{result.credentials.length}</div>
-                                <div className="text-xs text-gray-500 uppercase tracking-wider">Credentials</div>
+                            <div className="text-right hidden md:block">
+                                <div className="text-4xl font-black text-slate-900 leading-none">{result.credentials.length}</div>
+                                <div className="text-[0.6rem] font-bold text-slate-400 uppercase tracking-[0.2em] mt-2">Verified Skills</div>
                             </div>
                         </div>
 
                         {result.credentials.length === 0 ? (
-                            <div className="text-center py-16 bg-gray-900/50 rounded-xl border border-gray-800">
-                                <ShieldCheck className="w-16 h-16 mx-auto mb-4 text-gray-600 opacity-50" />
-                                <p className="text-gray-400 text-lg mb-2">No credentials found</p>
-                                <p className="text-gray-500 text-sm">This wallet has no verified skill credentials yet.</p>
+                            <div className="text-center py-24 bg-white rounded-[2rem] border-2 border-slate-100 border-dashed">
+                                <ShieldCheck className="w-20 h-20 mx-auto mb-6 text-slate-200" />
+                                <h3 className="text-2xl font-bold text-slate-900 mb-2">No Credentials Found</h3>
+                                <p className="text-slate-500 font-medium">This wallet identity has no verified skill credentials yet.</p>
                             </div>
                         ) : (
-                            <>
-                                <h2 className="text-2xl font-bold mb-4">Verified Skills</h2>
-                                <div className="grid gap-4">
+                            <div className="space-y-6">
+                                <div className="flex items-center justify-between mb-8">
+                                    <h2 className="text-3xl font-black text-slate-900 tracking-tight">Verified Skills</h2>
+                                    <div className="px-4 py-1.5 bg-emerald-50 text-emerald-700 rounded-full text-xs font-bold border border-emerald-100 flex items-center gap-2">
+                                        <CheckCircle2 className="w-4 h-4" /> ON-CHAIN VERIFIED
+                                    </div>
+                                </div>
+                                <div className="grid gap-6">
                                     {result.credentials.map((cred: any) => (
                                         <motion.div
                                             key={cred.id}
-                                            initial={{ opacity: 0, scale: 0.95 }}
+                                            initial={{ opacity: 0, scale: 0.98 }}
                                             animate={{ opacity: 1, scale: 1 }}
-                                            className="bg-gradient-to-r from-gray-900 to-black border border-gray-800 p-6 rounded-xl hover:border-purple-500/50 transition duration-300"
+                                            className="bg-white border-2 border-slate-100 p-8 rounded-[2rem] hover:border-purple-200 transition-all duration-300 shadow-sm hover:shadow-xl group"
                                         >
-                                            <div className="flex justify-between items-start mb-4">
+                                            <div className="flex flex-col md:flex-row justify-between items-start gap-6 mb-8">
                                                 <div className="flex-1">
-                                                    <h3 className="text-2xl font-bold text-white mb-2">{cred.skill}</h3>
-                                                    <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getLevelColor(cred.level)}`}>
+                                                    <h3 className="text-3xl font-black text-slate-900 mb-4 group-hover:text-purple-600 transition-colors">{cred.skill}</h3>
+                                                    <span className={`px-4 py-2 rounded-xl text-sm font-bold border-2 ${getLevelColor(cred.level)} shadow-sm`}>
                                                         {cred.level}
                                                     </span>
                                                 </div>
-                                                <div className="text-right ml-4">
-                                                    <div className="text-4xl font-bold text-white mb-1">{cred.score}</div>
-                                                    <div className="text-xs text-gray-500 uppercase tracking-wider">Score</div>
+                                                <div className="text-left md:text-right bg-slate-50 p-6 rounded-2xl border border-slate-100 min-w-[140px]">
+                                                    <div className="text-5xl font-black text-slate-900 mb-1">{cred.score}</div>
+                                                    <div className="text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest">Mastery Score</div>
                                                 </div>
                                             </div>
 
-                                            <div className="flex items-center gap-4 text-sm text-gray-400 border-t border-gray-800 pt-4 mt-4 flex-wrap">
-                                                <span className="flex items-center gap-1">
-                                                    <CheckCircle2 className="w-4 h-4 text-green-400" />
+                                            <div className="flex flex-wrap items-center gap-6 text-sm font-bold border-t border-slate-100 pt-8 mt-4">
+                                                <span className="flex items-center gap-2 text-slate-500">
+                                                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                                                     Minted: {cred.date}
                                                 </span>
                                                 {cred.evidence && (
@@ -190,9 +204,9 @@ export default function VerifierDashboard() {
                                                         href={cred.evidence}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
-                                                        className="flex items-center gap-1 hover:text-white transition text-purple-400"
+                                                        className="flex items-center gap-2 text-purple-600 hover:text-purple-700 bg-purple-50 px-4 py-2 rounded-xl transition-all"
                                                     >
-                                                        View Evidence <ExternalLink className="w-3 h-3" />
+                                                        Proof of Work <ExternalLink className="w-4 h-4" />
                                                     </a>
                                                 )}
                                                 {cred.txHash && (
@@ -200,16 +214,16 @@ export default function VerifierDashboard() {
                                                         href={`https://stellar.expert/explorer/testnet/tx/${cred.txHash}`}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
-                                                        className="ml-auto flex items-center gap-1 hover:text-purple-300 transition text-purple-400"
+                                                        className="md:ml-auto flex items-center gap-2 text-slate-900 hover:bg-slate-100 px-4 py-2 rounded-xl transition-all border border-slate-200"
                                                     >
-                                                        View on Explorer <ExternalLink className="w-3 h-3" />
+                                                        Ledger Proof <ExternalLink className="w-4 h-4" />
                                                     </a>
                                                 )}
                                             </div>
                                         </motion.div>
                                     ))}
                                 </div>
-                            </>
+                            </div>
                         )}
                     </motion.div>
                 )}

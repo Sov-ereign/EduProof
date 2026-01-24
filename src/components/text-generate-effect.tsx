@@ -25,7 +25,7 @@ const AnimatedHeading = ({ text }: AnimatedHeadingProps) => {
         text-6xl md:text-8xl 
         font-bold tracking-tighter 
         mb-8 
-        text-white
+        text-purple-600
         drop-shadow-[0_0_30px_rgba(124,58,237,0.35)]
       "
     >

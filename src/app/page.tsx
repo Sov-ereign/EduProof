@@ -8,41 +8,47 @@ import AnimatedHeading from "../components/text-generate-effect";
 
 export default function LandingPage() {
   return (
-    <div className="relative min-h-screen text-white selection:bg-purple-500 selection:text-white overflow-hidden">
+    <div className="relative min-h-screen bg-slate-50 text-slate-900 selection:bg-purple-500 selection:text-white overflow-hidden">
 
       {/* ================= BACKGROUND ================= */}
+      <div className="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-purple-100 via-slate-50 to-slate-50" />
       <div className="fixed inset-0 -z-10">
-        <div className="absolute inset-0 bg-black/40" />
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-200/20 blur-[120px] rounded-full" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-200/20 blur-[120px] rounded-full" />
       </div>
       {/* ============================================== */}
 
 
 
       {/* ================= HERO ================= */}
-      <main className="pt-32 pb-20 relative z-10">
+      <main className="pt-40 pb-32 relative z-10">
         <div className="max-w-7xl mx-auto px-6 text-center">
           <motion.div
-            initial={{ opacity: 0, y: 24 }}
+            initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.9, ease: "easeOut" }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
           >
+            <div className="inline-block px-4 py-1.5 mb-6 text-sm font-bold tracking-wider text-purple-600 uppercase bg-purple-50 rounded-full border border-purple-100">
+              Future of Skill Verification
+            </div>
+
             <AnimatedHeading text="Skill Credentials That Can’t Be Faked." />
 
-            <p className="text-xl text-gray-300 max-w-2xl mx-auto mb-10 leading-relaxed">
+            <p className="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto mt-8 mb-12 leading-relaxed font-medium">
               EduProof Zero issues tamper-proof, wallet-bound credentials backed by
               real evidence. Verified by AI and stored permanently on Stellar
               blockchain.
             </p>
 
-            <div className="flex flex-col md:flex-row items-center justify-center gap-4">
+            <div className="flex flex-col md:flex-row items-center justify-center gap-6">
               <Link href="/student">
-                <button className="h-12 px-8 rounded-full bg-purple-600 hover:bg-purple-500 text-white font-semibold transition">
+                <button className="h-14 px-10 rounded-full bg-purple-600 hover:bg-purple-700 text-white font-bold transition shadow-lg shadow-purple-200 hover:shadow-purple-300 transform hover:-translate-y-1">
                   Prove Your Skill
                 </button>
               </Link>
 
               <Link href="/verifier">
-                <button className="h-12 px-8 rounded-full border border-white/20 hover:bg-white/10 text-white font-semibold transition">
+                <button className="h-14 px-10 rounded-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-900 font-bold transition shadow-sm hover:shadow-md transform hover:-translate-y-1">
                   Verify a Wallet
                 </button>
               </Link>
@@ -75,11 +81,14 @@ export default function LandingPage() {
         {/* ================= HOW IT WORKS ================= */}
         <div
           id="how-it-works"
-          className="max-w-7xl mx-auto px-6 mt-32 mb-20"
+          className="max-w-7xl mx-auto px-6 mt-40 mb-32"
         >
-          <h2 className="text-4xl font-bold text-center mb-16">
-            How It Works
-          </h2>
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-slate-900 mb-4">
+              How It Works
+            </h2>
+            <div className="w-24 h-1.5 bg-purple-600 mx-auto rounded-full" />
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <StepCard
@@ -116,20 +125,17 @@ function FeatureCard({
   desc: string;
 }) {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl
- hover:border-purple-500/50 transition duration-300 group">
-
-      {/* dotted glow background */}
-      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-        <div className="absolute inset-0 bg-purple-500/10 blur-xl" />
+    <div className="relative overflow-hidden rounded-2xl border border-slate-100 bg-white p-8 hover:border-purple-200 transition-all duration-300 group shadow-sm hover:shadow-xl hover:-translate-y-2">
+      <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+        <div className="bg-purple-600 w-24 h-24 rounded-full blur-2xl" />
       </div>
 
-      <div className="relative z-10 p-8">
-        <div className="text-purple-500 mb-4 w-10 h-10">
+      <div className="relative z-10">
+        <div className="text-purple-600 mb-6 w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center group-hover:bg-purple-600 group-hover:text-white transition-colors duration-300">
           {icon}
         </div>
-        <h3 className="text-xl font-bold mb-2">{title}</h3>
-        <p className="text-gray-400 leading-relaxed">{desc}</p>
+        <h3 className="text-xl font-bold mb-4 text-slate-900">{title}</h3>
+        <p className="text-slate-500 leading-relaxed text-sm font-medium">{desc}</p>
       </div>
     </div>
   );
@@ -145,20 +151,13 @@ function StepCard({
   desc: string;
 }) {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl
- hover:border-purple-500/50 transition duration-300 group">
-
-      {/* dotted glow background */}
-      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-        <div className="absolute inset-0 bg-purple-500/10 blur-xl" />
+    <div className="relative p-8 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md transition-all group">
+      <div className="absolute -top-4 -left-4 w-12 h-12 rounded-2xl bg-purple-600 text-white flex items-center justify-center font-bold text-xl shadow-lg shadow-purple-200 group-hover:scale-110 transition-transform">
+        {number}
       </div>
-
-      <div className="relative z-10 p-8">
-        <div className="w-12 h-12 rounded-full bg-purple-500/20 border border-purple-500/50 flex items-center justify-center text-purple-400 font-bold text-xl mb-4">
-          {number}
-        </div>
-        <h3 className="text-xl font-bold mb-2">{title}</h3>
-        <p className="text-gray-400 leading-relaxed">{desc}</p>
+      <div className="mt-4">
+        <h3 className="text-xl font-bold mb-4 text-slate-900">{title}</h3>
+        <p className="text-slate-500 leading-relaxed text-sm font-medium">{desc}</p>
       </div>
     </div>
   );

@@ -218,29 +218,29 @@ export default function StudentDashboard() {
     // AUTH WALL
     if (!session) {
         return (
-            <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6 relative overflow-hidden">
-                <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-900/40 via-black to-black -z-10" />
+            <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col items-center justify-center p-6 relative overflow-hidden">
+                <div className="fixed inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-purple-50 via-slate-50 to-slate-50 -z-10" />
 
                 <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
+                    initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="max-w-md w-full bg-gray-900/60 backdrop-blur-xl border border-white/10 p-8 rounded-3xl text-center"
+                    className="max-w-md w-full bg-white border border-slate-200 p-10 rounded-[2rem] text-center shadow-xl shadow-purple-100"
                 >
-                    <div className="w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <Lock className="w-10 h-10 text-gray-400" />
+                    <div className="w-20 h-20 bg-purple-100 rounded-3xl flex items-center justify-center mx-auto mb-8 transform -rotate-6">
+                        <Lock className="w-10 h-10 text-purple-600" />
                     </div>
-                    <h1 className="text-3xl font-bold mb-3">Login Required</h1>
-                    <p className="text-gray-400 mb-8">
+                    <h1 className="text-3xl font-bold mb-4 text-slate-900">Sign in to EduProof</h1>
+                    <p className="text-slate-500 mb-10 font-medium">
                         To ensure the integrity of skill credentials, you must sign in with GitHub.
                     </p>
                     <button
                         onClick={() => signIn("github")}
-                        className="w-full bg-white text-black font-bold py-4 rounded-xl flex items-center justify-center gap-3 hover:bg-gray-200 transition-all hover:scale-[1.02] shadow-xl"
+                        className="w-full bg-slate-900 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-slate-800 transition-all hover:scale-[1.02] shadow-lg"
                     >
                         <Github className="w-6 h-6" />
                         Sign in with GitHub
                     </button>
-                    <p className="text-xs text-gray-600 mt-6">
+                    <p className="text-xs text-slate-400 mt-8 font-medium">
                         By continuing, you agree to our anti-cheat verification policy.
                     </p>
                 </motion.div>
@@ -249,40 +249,41 @@ export default function StudentDashboard() {
     }
 
     return (
-        <div className="min-h-screen bg-black text-white relative overflow-hidden">
-            {/* Background gradient */}
-            <div className="fixed inset-0 bg-gradient-to-b from-black via-purple-950/5 to-black -z-10" />
+        <div className="min-h-screen bg-slate-50 text-slate-900 relative">
+            {/* Background pattern */}
+            <div className="fixed inset-0 opacity-40 -z-10 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:24px_24px]" />
 
-            <div className="container-custom max-w-[1600px] mx-auto px-4 sm:px-6 py-8 md:py-12">
+            <div className="max-w-7xl mx-auto px-6 py-12">
                 {/* Header */}
                 <ScrollReveal direction="down" threshold={0.1}>
-                    <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 md:mb-12 pb-6 border-b border-white/10">
+                    <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-12 pb-8 border-b border-slate-200">
                         <div>
-                            <h1 className="text-3xl md:text-4xl font-bold mb-2 gradient-text-purple">Prove Your Skill</h1>
-                            <div className="flex items-center gap-2 text-sm md:text-base text-gray-400">
-                                <span>Welcome, <span className="text-white font-semibold">{session.user?.name}</span></span>
-                                <button onClick={() => signOut()} className="text-xs text-red-400 hover:text-red-300 ml-2 border border-red-500/30 px-2 py-1 rounded">Sign Out</button>
+                            <h1 className="text-3xl md:text-5xl font-black mb-3 text-slate-900 tracking-tight">Prove Your Skill</h1>
+                            <div className="flex items-center gap-3 text-sm md:text-base text-slate-500 font-medium">
+                                <div className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
+                                <span>Welcome, <span className="text-slate-900 font-bold">{session.user?.name}</span></span>
+                                <button onClick={() => signOut()} className="text-xs text-red-500 hover:bg-red-50 font-bold ml-4 border border-red-200 px-3 py-1.5 rounded-lg transition-colors">Sign Out</button>
                             </div>
                         </div>
                         {!wallet ? (
                             <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
+                                whileHover={{ y: -2 }}
+                                whileTap={{ scale: 0.98 }}
                                 onClick={handleConnect}
-                                className="group relative px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 rounded-xl font-semibold transition-all flex items-center gap-2 shadow-lg hover:shadow-purple-500/50"
+                                className="group relative px-8 py-4 bg-purple-600 text-white rounded-2xl font-bold transition-all flex items-center gap-3 shadow-lg shadow-purple-200 hover:bg-purple-700"
                             >
                                 <Wallet className="w-5 h-5" />
-                                <span className="hidden sm:inline">Connect Freighter</span>
+                                <span className="hidden sm:inline">Connect Freighter Wallet</span>
                                 <span className="sm:hidden">Connect</span>
                             </motion.button>
                         ) : (
                             <motion.div
                                 initial={{ scale: 0.9, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
-                                className="flex items-center gap-3 text-green-400 bg-green-500/10 px-4 py-3 rounded-xl border border-green-500/30 backdrop-blur-sm"
+                                className="flex items-center gap-4 text-emerald-700 bg-emerald-50 px-6 py-4 rounded-2xl border border-emerald-100 shadow-sm"
                             >
-                                <div className="w-2.5 h-2.5 rounded-full bg-green-400 animate-pulse shadow-lg shadow-green-400/50" />
-                                <span className="font-mono text-sm font-medium">{wallet.slice(0, 8)}...{wallet.slice(-6)}</span>
+                                <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse shadow-lg shadow-emerald-400" />
+                                <span className="font-mono text-sm font-bold">{wallet.slice(0, 8)}...{wallet.slice(-6)}</span>
                             </motion.div>
                         )}
                     </header>
@@ -362,28 +363,27 @@ export default function StudentDashboard() {
                     />
                 )}
 
-                {/* Main Content - Responsive Grid */}
-                <div className="max-w-[1600px] mx-auto grid grid-cols-1 xl:grid-cols-12 gap-4 md:gap-6">
+                <div className="max-w-7xl mx-auto grid grid-cols-1 xl:grid-cols-12 gap-8">
                     {/* Left Col: Submission Form - Takes 4 cols on XL, full width on mobile */}
-                    <div className="xl:col-span-4 bg-gray-900/50 backdrop-blur-sm rounded-xl md:rounded-2xl border border-gray-800 p-4 md:p-6">
-                        <h2 className="text-lg md:text-xl font-semibold mb-4 md:mb-6">Prove a Skill</h2>
+                    <div className="xl:col-span-4 bg-white rounded-[2rem] border border-slate-200 p-8 shadow-sm">
+                        <h2 className="text-xl font-bold mb-8 text-slate-900">Prove a Skill</h2>
 
-                        <div className="space-y-4 md:space-y-6">
+                        <div className="space-y-8">
                             <div>
-                                <label className="block text-gray-400 text-xs md:text-sm mb-2 md:mb-3">Select Skill</label>
-                                <div className="grid grid-cols-3 md:grid-cols-2 gap-2 md:gap-3">
+                                <label className="block text-slate-600 text-sm font-bold mb-4 uppercase tracking-wider">Select Skill</label>
+                                <div className="grid grid-cols-2 gap-3">
                                     {SKILLS.map(skill => (
                                         <motion.button
                                             key={skill.name}
-                                            whileHover={{ scale: 1.05 }}
-                                            whileTap={{ scale: 0.95 }}
+                                            whileHover={{ y: -1 }}
+                                            whileTap={{ scale: 0.98 }}
                                             onClick={() => {
                                                 setSelectedSkill(skill.name);
                                                 setResult(null);
                                             }}
-                                            className={`px-3 md:px-4 py-2 md:py-3 rounded-lg border transition text-xs md:text-sm ${selectedSkill === skill.name
-                                                ? "border-purple-500 bg-purple-500/20 text-white shadow-lg shadow-purple-500/20"
-                                                : "border-gray-700 hover:border-gray-500 text-gray-400"
+                                            className={`px-4 py-3 rounded-xl border-2 font-bold transition-all text-sm ${selectedSkill === skill.name
+                                                ? "border-purple-600 bg-purple-50 text-purple-700 shadow-md shadow-purple-50"
+                                                : "border-slate-100 bg-slate-50 hover:border-slate-300 text-slate-500 hover:text-slate-700"
                                                 }`}
                                         >
                                             {skill.name}
@@ -393,9 +393,9 @@ export default function StudentDashboard() {
                             </div>
 
                             <div>
-                                <label className="block text-gray-400 text-xs md:text-sm mb-2 md:mb-3">Evidence Link</label>
-                                <div className="relative">
-                                    <LinkIcon className="absolute left-3 top-3 text-gray-500 w-4 h-4 md:w-5 md:h-5" />
+                                <label className="block text-slate-600 text-sm font-bold mb-4 uppercase tracking-wider">Evidence Link</label>
+                                <div className="relative group">
+                                    <LinkIcon className="absolute left-4 top-4 text-slate-400 w-5 h-5 group-focus-within:text-purple-600 transition-colors" />
                                     <input
                                         type="text"
                                         placeholder="Paste your evidence URL..."
@@ -405,62 +405,73 @@ export default function StudentDashboard() {
                                             setResult(null);
                                         }}
                                         onKeyDown={(e) => e.key === 'Enter' && !isButtonDisabled && handleSubmit()}
-                                        className="w-full bg-gray-900 border border-gray-700 rounded-lg py-2.5 md:py-3 pl-9 md:pl-10 pr-4 text-white text-sm focus:outline-none focus:border-purple-500 transition"
+                                        className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl py-4 pl-12 pr-4 text-slate-900 text-sm font-medium focus:outline-none focus:border-purple-600 focus:bg-white transition-all shadow-inner"
                                     />
                                 </div>
-                                <p className="text-xs text-gray-500 mt-1.5 md:mt-2">
+                                <p className="text-xs text-slate-400 mt-3 font-medium flex items-center gap-2">
+                                    <div className="w-1 h-1 rounded-full bg-slate-300" />
                                     Supports: GitHub, Docs, Loom, Portfolio
                                 </p>
                             </div>
 
                             <motion.button
-                                whileHover={!isButtonDisabled ? { scale: 1.02 } : {}}
+                                whileHover={!isButtonDisabled ? { y: -2 } : {}}
                                 whileTap={!isButtonDisabled ? { scale: 0.98 } : {}}
                                 onClick={handleSubmit}
                                 disabled={isButtonDisabled}
-                                className={`w-full py-3 md:py-4 rounded-xl font-bold text-sm md:text-lg flex items-center justify-center gap-2 transition ${isButtonDisabled
-                                    ? "bg-gray-800 text-gray-500 cursor-not-allowed"
-                                    : "bg-white text-black hover:bg-gray-200 shadow-lg"
+                                className={`w-full py-4 rounded-2xl font-black text-sm md:text-base flex items-center justify-center gap-3 transition-all ${isButtonDisabled
+                                    ? "bg-slate-100 text-slate-400 cursor-not-allowed border-2 border-slate-50"
+                                    : "bg-slate-900 text-white hover:bg-slate-800 shadow-xl shadow-slate-100"
                                     }`}
                             >
                                 {analyzing ? (
                                     <>
-                                        <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin" />
-                                        <span className="hidden sm:inline">Analyzing Evidence...</span>
-                                        <span className="sm:hidden">Analyzing...</span>
+                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                        <span>Analyzing Evidence...</span>
                                     </>
                                 ) : (
-                                    getButtonText()
+                                    <>
+                                        {getButtonText()}
+                                    </>
                                 )}
                             </motion.button>
                         </div>
                     </div>
 
                     {/* Right Col: Results - Takes 8 cols on XL, full width on mobile */}
-                    <div className="xl:col-span-8 bg-gray-900/50 backdrop-blur-sm rounded-xl md:rounded-2xl border border-gray-800 p-4 md:p-6 flex flex-col min-h-[400px] md:min-h-[600px]">
+                    <div className="xl:col-span-8 bg-white rounded-[2rem] border border-slate-200 p-8 flex flex-col min-h-[500px] shadow-sm overflow-hidden relative">
                         {!result && !analyzing && !mintSuccess && (
-                            <div className="flex-1 flex flex-col justify-center items-center text-center text-gray-500">
-                                <motion.div
-                                    animate={{ y: [0, -10, 0] }}
-                                    transition={{ duration: 2, repeat: Infinity }}
-                                >
-                                    <Upload className="w-12 h-12 md:w-16 md:h-16 mx-auto mb-4 opacity-50" />
-                                </motion.div>
-                                <p className="text-base md:text-lg mb-2">Submit evidence to see your score</p>
-                                <p className="text-xs md:text-sm">AI will evaluate your work against a public rubric</p>
+                            <div className="flex-1 flex flex-col justify-center items-center text-center">
+                                <div className="w-32 h-32 bg-slate-50 rounded-full flex items-center justify-center mb-8 border border-slate-100">
+                                    <motion.div
+                                        animate={{ y: [0, -12, 0] }}
+                                        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                                    >
+                                        <Upload className="w-12 h-12 text-slate-300" />
+                                    </motion.div>
+                                </div>
+                                <h3 className="text-2xl font-bold text-slate-900 mb-3">Your Evaluation Awaits</h3>
+                                <p className="text-slate-500 max-w-sm font-medium">Submit evidence to see your AI-analyzed skill score against our public rubric.</p>
                             </div>
                         )}
 
                         {analyzing && (
-                            <div className="flex-1 flex flex-col justify-center items-center space-y-4">
-                                <motion.div
-                                    animate={{ rotate: 360 }}
-                                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                                    className="w-12 h-12 md:w-16 md:h-16 border-4 border-purple-500 border-t-transparent rounded-full"
-                                />
-                                <div className="space-y-2 text-center">
-                                    <p className="text-purple-400 font-medium text-sm md:text-base">Analyzing your evidence...</p>
-                                    <p className="text-gray-500 text-xs md:text-sm">Checking code quality, logic, and documentation</p>
+                            <div className="flex-1 flex flex-col justify-center items-center">
+                                <div className="relative w-24 h-24 mb-8">
+                                    <motion.div
+                                        animate={{ rotate: 360 }}
+                                        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                                        className="absolute inset-0 border-4 border-purple-500/20 border-t-purple-600 rounded-full"
+                                    />
+                                    <motion.div
+                                        animate={{ rotate: -360 }}
+                                        transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                                        className="absolute inset-4 border-4 border-indigo-500/20 border-t-indigo-600 rounded-full"
+                                    />
+                                </div>
+                                <div className="text-center">
+                                    <p className="text-xl font-bold text-slate-900 mb-2">Analyzing Evidence...</p>
+                                    <p className="text-slate-500 font-medium">Checking code quality, depth, and best practices</p>
                                 </div>
                             </div>
                         )}
@@ -473,24 +484,24 @@ export default function StudentDashboard() {
                             >
                                 {result.failed || result.score === 0 ? (
                                     // FAILED EVALUATION
-                                    <div className="flex-1 flex flex-col items-center justify-center text-center">
-                                        <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center border-2 border-red-500/30 mb-4">
-                                            <X className="w-10 h-10 text-red-500" />
+                                    <div className="flex-1 flex flex-col items-center justify-center text-center py-20">
+                                        <div className="w-24 h-24 bg-red-50 rounded-full flex items-center justify-center border-2 border-red-100 mb-8">
+                                            <X className="w-12 h-12 text-red-500" />
                                         </div>
-                                        <h3 className="text-3xl font-bold text-red-400 mb-2">Evaluation Failed</h3>
-                                        <p className="text-gray-400 mb-6">Score: {result.score}/100</p>
-                                        <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-4 w-full text-left">
-                                            <p className="text-sm text-red-400 mb-3 font-medium">Failure Reason:</p>
-                                            <ul className="text-sm space-y-2">
+                                        <h3 className="text-4xl font-black text-slate-900 mb-2">Evaluation Failed</h3>
+                                        <p className="text-slate-500 font-bold mb-10">Score: {result.score}/100</p>
+                                        <div className="bg-red-50/50 border border-red-100 rounded-[1.5rem] p-8 w-full text-left">
+                                            <p className="text-sm text-red-900 mb-4 font-black uppercase tracking-wider">Failure Analysis:</p>
+                                            <ul className="space-y-4">
                                                 {result.feedback.map((f: string, i: number) => (
-                                                    <li key={i} className="flex items-start gap-2">
-                                                        <span className="text-red-500 mt-1">•</span>
-                                                        <span className="text-gray-300">{f}</span>
+                                                    <li key={i} className="flex items-start gap-4 text-sm font-medium text-red-700">
+                                                        <div className="w-2 h-2 rounded-full bg-red-400 mt-1.5 flex-shrink-0" />
+                                                        <span>{f}</span>
                                                     </li>
                                                 ))}
                                             </ul>
                                         </div>
-                                        <p className="text-gray-500 text-sm mt-6">Please submit evidence that actually contains {selectedSkill} code</p>
+                                        <p className="text-slate-400 text-xs mt-10 font-bold uppercase tracking-widest leading-relaxed">Please submit evidence that actually contains <span className="text-purple-600">{selectedSkill}</span> code for a valid assessment.</p>
                                     </div>
                                 ) : (
                                     // SUCCESSFUL EVALUATION
@@ -594,72 +605,71 @@ function EvaluationResults({
     }, [result.feedback]);
 
     const getScoreColor = (score: number) => {
-        if (score >= 90) return "text-green-400";
-        if (score >= 80) return "text-blue-400";
-        if (score >= 70) return "text-yellow-400";
-        return "text-orange-400";
+        if (score >= 90) return "text-emerald-600";
+        if (score >= 80) return "text-blue-600";
+        if (score >= 70) return "text-amber-600";
+        return "text-orange-600";
     };
 
     const getLevelBadgeColor = (level: string) => {
         switch (level) {
-            case "Expert": return "from-purple-500 to-pink-500";
-            case "Advanced": return "from-blue-500 to-cyan-500";
-            case "Intermediate": return "from-green-500 to-emerald-500";
-            default: return "from-gray-500 to-gray-600";
+            case "Expert": return "from-purple-600 to-indigo-600 shadow-purple-100";
+            case "Advanced": return "from-blue-600 to-indigo-600 shadow-blue-100";
+            case "Intermediate": return "from-emerald-600 to-teal-600 shadow-emerald-100";
+            default: return "from-slate-600 to-slate-700 shadow-slate-100";
         }
     };
 
     return (
-        <div className="flex-1 flex flex-col gap-3 md:gap-4 overflow-y-auto custom-scrollbar">
+        <div className="flex-1 flex flex-col gap-6 overflow-y-auto custom-scrollbar">
             {/* Score Header - Compact Horizontal Layout */}
             <motion.div
-                initial={{ scale: 0.95, opacity: 0 }}
+                initial={{ scale: 0.98, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ duration: 0.4 }}
-                className="relative bg-gradient-to-br from-gray-900 via-purple-900/20 to-gray-900 rounded-xl md:rounded-2xl p-4 md:p-6 border border-purple-500/30 overflow-hidden"
+                className="relative bg-white rounded-[2rem] p-8 border border-slate-100 shadow-xl shadow-purple-50 overflow-hidden"
             >
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-transparent to-indigo-500/10" />
-                <div className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <div className="flex items-center gap-4 flex-1">
+                <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-purple-500 to-indigo-500" />
+                <div className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+                    <div className="flex items-center gap-6 flex-1">
                         <motion.div
                             initial={{ scale: 0 }}
                             animate={{ scale: 1 }}
                             transition={{ delay: 0.2, type: "spring" }}
-                            className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-full flex items-center justify-center border-2 border-green-500/50 shadow-lg shadow-green-500/20 flex-shrink-0"
+                            className="w-20 h-20 bg-emerald-50 rounded-3xl flex items-center justify-center border-2 border-emerald-100 shadow-sm flex-shrink-0"
                         >
-                            <CheckCircle className="w-8 h-8 md:w-10 md:h-10 text-green-400" />
+                            <CheckCircle className="w-10 h-10 text-emerald-500" />
                         </motion.div>
                         <div>
                             <motion.div
                                 initial={{ opacity: 0, y: -10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.3 }}
-                                className="flex items-baseline gap-2 mb-1.5"
+                                className="flex items-baseline gap-2 mb-2"
                             >
-                                <h3 className={`text-4xl md:text-5xl lg:text-6xl font-bold ${getScoreColor(score)}`}>
+                                <h3 className={`text-6xl font-black ${getScoreColor(score)}`}>
                                     {scoreDisplay}
                                 </h3>
-                                <span className="text-2xl md:text-3xl text-gray-500">/100</span>
+                                <span className="text-3xl text-slate-300">/100</span>
                             </motion.div>
                             <motion.div
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 transition={{ delay: 0.4 }}
-                                className={`inline-block bg-gradient-to-r ${getLevelBadgeColor(result.level)} px-3 md:px-4 py-1 md:py-1.5 rounded-full text-white font-semibold text-xs md:text-sm shadow-lg`}
+                                className={`inline-block bg-gradient-to-r ${getLevelBadgeColor(result.level)} px-4 py-1.5 rounded-xl text-white font-bold text-sm shadow-lg`}
                             >
-                                <Award className="w-3 h-3 md:w-4 md:h-4 inline mr-1.5" />
+                                <Award className="w-4 h-4 inline mr-2" />
                                 {result.level}
                             </motion.div>
                         </div>
                     </div>
                     {/* Progress Bar */}
-                    <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ delay: 0.5, type: "spring" }}
-                        className="w-full sm:w-48 md:w-64"
-                    >
-                        <div className="relative w-full h-2 md:h-3 bg-gray-800 rounded-full overflow-hidden">
+                    <div className="w-full sm:w-64">
+                        <div className="flex justify-between text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">
+                            <span>Score Progress</span>
+                            <span>{score}%</span>
+                        </div>
+                        <div className="relative w-full h-3 bg-slate-100 rounded-full overflow-hidden">
                             <motion.div
                                 initial={{ width: 0 }}
                                 animate={{ width: `${score}%` }}
@@ -667,12 +677,12 @@ function EvaluationResults({
                                 className={`h-full bg-gradient-to-r ${getLevelBadgeColor(result.level)} rounded-full shadow-lg`}
                             />
                         </div>
-                    </motion.div>
+                    </div>
                 </div>
             </motion.div>
 
             {/* Compact Grid Layout for Details */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 md:gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
 
                 {/* Repository Info - Compact */}
                 {result.owner && result.owner !== 'External' && (
@@ -680,17 +690,17 @@ function EvaluationResults({
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.2 }}
-                        className="bg-gradient-to-r from-purple-500/10 to-indigo-500/10 rounded-xl p-3 md:p-4 border border-purple-500/20"
+                        className="bg-slate-50 rounded-[1.5rem] p-6 border border-slate-100"
                     >
-                        <p className="text-xs text-gray-400 mb-2 font-medium">Repository</p>
-                        <div className="flex items-center gap-2 flex-wrap mb-2">
-                            <p className="text-white font-semibold text-sm">{result.owner}</p>
+                        <p className="text-[0.6rem] font-black text-slate-400 mb-4 uppercase tracking-widest">Repository Evidence</p>
+                        <div className="flex items-center gap-3 flex-wrap mb-4">
+                            <p className="text-slate-900 font-bold text-sm tracking-tight">{result.owner}</p>
                             {result.ownerUsername && (
                                 <a
                                     href={`https://github.com/${result.ownerUsername}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-purple-400 hover:text-purple-300 text-xs flex items-center gap-1 transition"
+                                    className="text-purple-600 hover:text-purple-700 font-bold text-xs flex items-center gap-1 transition-colors"
                                 >
                                     @{result.ownerUsername}
                                     <ExternalLink className="w-3 h-3" />
@@ -698,16 +708,16 @@ function EvaluationResults({
                             )}
                         </div>
                         {result.repositoryInfo && (
-                            <div className="flex gap-3 md:gap-4 text-xs text-gray-400 mb-2">
+                            <div className="flex gap-4 text-xs font-bold text-slate-500 mb-4">
                                 {result.repositoryInfo.stars !== undefined && (
-                                    <span className="flex items-center gap-1">
-                                        <span className="text-yellow-400">⭐</span>
+                                    <span className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-slate-100">
+                                        <span className="text-amber-500">⭐</span>
                                         {result.repositoryInfo.stars}
                                     </span>
                                 )}
                                 {result.repositoryInfo.forks !== undefined && (
-                                    <span className="flex items-center gap-1">
-                                        <span>🍴</span>
+                                    <span className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-slate-100">
+                                        <span className="text-purple-500">🍴</span>
                                         {result.repositoryInfo.forks}
                                     </span>
                                 )}
@@ -715,11 +725,11 @@ function EvaluationResults({
                         )}
                         {result.languages && Object.keys(result.languages).length > 0 && (
                             <div>
-                                <div className="flex h-2 rounded-full overflow-hidden bg-gray-800">
+                                <div className="flex h-1.5 rounded-full overflow-hidden bg-slate-200">
                                     {Object.entries(result.languages).slice(0, 3).map(([lang, bytes]: [string, any], i) => {
                                         const total: number = Object.values(result.languages).reduce((a: any, b: any) => a + b, 0) as number;
                                         const percent = (bytes / total) * 100;
-                                        const colors = ["bg-blue-500", "bg-yellow-500", "bg-purple-500"];
+                                        const colors = ["bg-blue-500", "bg-amber-400", "bg-purple-500"];
                                         return (
                                             <motion.div
                                                 key={lang}
@@ -732,10 +742,10 @@ function EvaluationResults({
                                         );
                                     })}
                                 </div>
-                                <div className="flex gap-2 mt-1.5 text-xs text-gray-400">
+                                <div className="flex flex-wrap gap-3 mt-3 text-[0.65rem] font-bold text-slate-400">
                                     {Object.keys(result.languages).slice(0, 3).map((lang, i) => (
-                                        <span key={lang} className="flex items-center gap-1">
-                                            <div className={`w-1.5 h-1.5 rounded-full ${["bg-blue-500", "bg-yellow-500", "bg-purple-500"][i]}`} />
+                                        <span key={lang} className="flex items-center gap-1.5">
+                                            <div className={`w-1.5 h-1.5 rounded-full ${["bg-blue-500", "bg-amber-400", "bg-purple-500"][i]}`} />
                                             {lang}
                                         </span>
                                     ))}
@@ -751,13 +761,13 @@ function EvaluationResults({
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.3 }}
-                        className="bg-black/40 rounded-xl p-3 md:p-4 border border-gray-800 xl:col-span-2"
+                        className="bg-white rounded-[1.5rem] p-6 border border-slate-100 xl:col-span-2 shadow-sm"
                     >
-                        <div className="flex items-center gap-2 mb-3">
-                            <BarChart3 className="w-4 h-4 md:w-5 md:h-5 text-purple-400" />
-                            <p className="text-xs md:text-sm font-semibold text-gray-300 truncate">{result.rubric?.name || selectedSkill}</p>
+                        <div className="flex items-center gap-3 mb-6">
+                            <BarChart3 className="w-5 h-5 text-purple-600" />
+                            <p className="text-sm font-black text-slate-900 uppercase tracking-widest">{result.rubric?.name || selectedSkill} Mastery</p>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                             {parsedData.criteriaScores.map((criteria, i) => (
                                 <motion.div
                                     key={i}
@@ -765,21 +775,21 @@ function EvaluationResults({
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ delay: 0.4 + i * 0.1 }}
                                 >
-                                    <div className="flex justify-between items-center mb-1.5">
-                                        <span className="text-xs md:text-sm text-gray-300 font-medium truncate">{criteria.name}</span>
-                                        <div className="flex items-center gap-1.5 ml-2">
-                                            <span className={`text-xs md:text-sm font-bold ${getScoreColor(criteria.score)}`}>
+                                    <div className="flex justify-between items-center mb-3">
+                                        <span className="text-xs text-slate-600 font-bold truncate">{criteria.name}</span>
+                                        <div className="flex items-center gap-2 ml-4">
+                                            <span className={`text-base font-black ${getScoreColor(criteria.score)}`}>
                                                 {criteria.score}
                                             </span>
-                                            <span className="text-xs text-gray-500">({criteria.weight}%)</span>
+                                            <span className="text-[0.65rem] font-bold text-slate-300">({criteria.weight}%)</span>
                                         </div>
                                     </div>
-                                    <div className="relative w-full h-2 bg-gray-800 rounded-full overflow-hidden">
+                                    <div className="relative w-full h-2 bg-slate-50 rounded-full overflow-hidden border border-slate-100">
                                         <motion.div
                                             initial={{ width: 0 }}
                                             animate={{ width: `${criteria.score}%` }}
                                             transition={{ duration: 1, delay: 0.5 + i * 0.1, ease: "easeOut" }}
-                                            className={`h-full bg-gradient-to-r ${getLevelBadgeColor(result.level)} rounded-full`}
+                                            className={`h-full bg-slate-900 rounded-full`}
                                         />
                                     </div>
                                 </motion.div>
@@ -794,35 +804,34 @@ function EvaluationResults({
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.4 }}
-                        className="bg-gradient-to-br from-gray-900/50 to-black/50 rounded-xl p-3 md:p-4 border border-gray-800"
+                        className="bg-slate-50 rounded-[1.5rem] p-6 border border-slate-100"
                     >
-                        <div className="flex items-center gap-2 mb-3">
-                            <FileCode className="w-4 h-4 md:w-5 md:h-5 text-blue-400" />
-                            <p className="text-xs md:text-sm font-semibold text-gray-300">
-                                Files ({parsedData.files.length})
+                        <div className="flex items-center gap-3 mb-6">
+                            <FileCode className="w-5 h-5 text-blue-600" />
+                            <p className="text-[0.6rem] font-black text-slate-400 uppercase tracking-widest">
+                                Evidence Source ({parsedData.files.length} Files)
                             </p>
                         </div>
-                        <div className="max-h-32 md:max-h-40 overflow-y-auto space-y-1.5 custom-scrollbar">
+                        <div className="max-h-48 overflow-y-auto space-y-2 custom-scrollbar">
                             {parsedData.files.slice(0, 5).map((file, i) => (
                                 <motion.div
                                     key={i}
                                     initial={{ opacity: 0, x: -10 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ delay: 0.5 + i * 0.05 }}
-                                    className="flex items-center justify-between bg-gray-800/50 rounded-lg p-2 hover:bg-gray-800/70 transition"
+                                    className="flex items-center justify-between bg-white rounded-xl p-3 border border-slate-100/50 hover:shadow-sm transition-all"
                                 >
-                                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                                        <FileCode className="w-3 h-3 text-purple-400 flex-shrink-0" />
-                                        <span className="text-xs text-gray-300 font-mono truncate">{file.path.split('/').pop()}</span>
+                                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                                        <div className="bg-blue-50 p-1.5 rounded-lg">
+                                            <FileCode className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                                        </div>
+                                        <span className="text-xs text-slate-700 font-bold truncate">{file.path.split('/').pop()}</span>
                                     </div>
-                                    <div className="flex items-center gap-2 text-xs text-gray-500 ml-2">
-                                        <span>{file.lines}L</span>
+                                    <div className="flex items-center gap-2 text-[0.65rem] font-black text-slate-300 ml-4">
+                                        <span>{file.lines} LINES</span>
                                     </div>
                                 </motion.div>
                             ))}
-                            {parsedData.files.length > 5 && (
-                                <p className="text-xs text-gray-500 text-center pt-1">+{parsedData.files.length - 5} more files</p>
-                            )}
                         </div>
                     </motion.div>
                 )}
@@ -832,13 +841,13 @@ function EvaluationResults({
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.5 }}
-                    className="bg-black/40 rounded-xl p-3 md:p-4 border border-gray-800 xl:col-span-3 flex flex-col max-h-64 md:max-h-80"
+                    className="bg-white rounded-[2rem] p-8 border border-slate-100 xl:col-span-3 flex flex-col shadow-xl shadow-slate-100"
                 >
-                    <div className="flex items-center gap-2 mb-3">
-                        <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-green-400" />
-                        <p className="text-xs md:text-sm font-semibold text-gray-300">AI Analysis</p>
+                    <div className="flex items-center gap-3 mb-8">
+                        <TrendingUp className="w-6 h-6 text-emerald-600" />
+                        <p className="text-sm font-black text-slate-900 uppercase tracking-widest">Advanced AI Insights</p>
                     </div>
-                    <div className="flex-1 overflow-y-auto space-y-1.5 custom-scrollbar">
+                    <div className="flex-1 overflow-y-auto space-y-4 custom-scrollbar pr-2">
                         {parsedData.feedbackItems.slice(0, 8).map((f: string, i: number) => {
                             const isPositive = f.includes('✓');
                             const isWarning = f.includes('⚠');
@@ -850,26 +859,23 @@ function EvaluationResults({
                                     initial={{ opacity: 0, x: -10 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ delay: 0.6 + i * 0.03 }}
-                                    className={`flex items-start gap-2 text-xs md:text-sm p-1.5 md:p-2 rounded-lg ${isPositive ? 'bg-green-500/10 text-green-300' :
-                                        isWarning ? 'bg-yellow-500/10 text-yellow-300' :
-                                            isError ? 'bg-red-500/10 text-red-300' :
-                                                'text-gray-300'
-                                        }`}
+                                    className={`flex items-start gap-4 text-sm p-4 rounded-2xl border ${isPositive ? 'bg-emerald-50 border-emerald-100 text-emerald-800' :
+                                        isWarning ? 'bg-amber-50 border-amber-100 text-amber-800' :
+                                            isError ? 'bg-red-50 border-red-100 text-red-800' :
+                                                'bg-slate-50 border-slate-100 text-slate-700'
+                                        } font-medium`}
                                 >
-                                    <span className={`mt-0.5 flex-shrink-0 ${isPositive ? 'text-green-400' :
-                                        isWarning ? 'text-yellow-400' :
-                                            isError ? 'text-red-400' :
-                                                'text-purple-400'
+                                    <div className={`mt-0.5 flex-shrink-0 w-6 h-6 rounded-lg flex items-center justify-center font-bold ${isPositive ? 'bg-emerald-100 text-emerald-600' :
+                                        isWarning ? 'bg-amber-100 text-amber-600' :
+                                            isError ? 'bg-red-100 text-red-600' :
+                                                'bg-slate-200 text-slate-500'
                                         }`}>
                                         {isPositive ? '✓' : isWarning ? '⚠' : isError ? '❌' : '•'}
-                                    </span>
-                                    <span className="flex-1 text-xs md:text-sm">{f.replace(/^[✓⚠❌•]\s*/, '')}</span>
+                                    </div>
+                                    <span className="flex-1 leading-relaxed">{f.replace(/^[✓⚠❌•]\s*/, '')}</span>
                                 </motion.div>
                             );
                         })}
-                        {parsedData.feedbackItems.length > 8 && (
-                            <p className="text-xs text-gray-500 text-center pt-1">+{parsedData.feedbackItems.length - 8} more items</p>
-                        )}
                     </div>
                 </motion.div>
             </div>
@@ -881,24 +887,24 @@ function EvaluationResults({
                 transition={{ delay: 0.7 }}
                 onClick={onMint}
                 disabled={minting || result.score < 70}
-                whileHover={!minting && result.score >= 70 ? { scale: 1.02 } : {}}
+                whileHover={!minting && result.score >= 70 ? { y: -2 } : {}}
                 whileTap={!minting && result.score >= 70 ? { scale: 0.98 } : {}}
-                className={`w-full bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:opacity-90 py-3 md:py-4 rounded-xl font-bold text-sm md:text-base text-white shadow-lg shadow-purple-900/30 transition-all flex items-center justify-center gap-2 ${minting || result.score < 70 ? "opacity-50 cursor-not-allowed" : ""
+                className={`w-full py-5 rounded-[1.5rem] font-black text-lg text-white shadow-xl transition-all flex items-center justify-center gap-3 ${result.score < 70
+                    ? "bg-slate-200 text-slate-400 cursor-not-allowed border-2 border-slate-100"
+                    : "bg-slate-900 hover:bg-slate-800 shadow-slate-200"
                     }`}
             >
                 {minting ? (
                     <>
-                        <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin" />
-                        <span className="hidden sm:inline">Minting Credential...</span>
-                        <span className="sm:hidden">Minting...</span>
+                        <Loader2 className="w-6 h-6 animate-spin" />
+                        <span>Minting Credential Ledger...</span>
                     </>
                 ) : result.score < 70 ? (
-                    `Score too low (need ≥70)`
+                    `Score too low to mint (need ≥70)`
                 ) : (
                     <>
-                        <Award className="w-4 h-4 md:w-5 md:h-5" />
-                        <span className="hidden sm:inline">Mint Credential NFT</span>
-                        <span className="sm:hidden">Mint NFT</span>
+                        <Award className="w-6 h-6" />
+                        <span>MINT SOULBOUND CREDENTIAL</span>
                     </>
                 )}
             </motion.button>
