@@ -275,6 +275,108 @@ function validateSkillMatch(code: string, skill: string, fileExtension: string):
     return { matches, confidence: Math.min(100, Math.max(0, confidence)), evidence };
 }
 
+// Advanced Static Analysis: Complexity, Readability, and Concepts
+function calculateComplexity(code: string, skill: string): { complexity: number; concepts: string[]; commentRatio: number } {
+    const lines = code.split('\n');
+    let complexity = 1; // Base complexity
+    let maxNesting = 0;
+    let currentNesting = 0;
+    let commentLines = 0;
+    let codeLines = 0;
+    const concepts: string[] = [];
+
+    // Language-specific patterns
+    const patterns = {
+        Python: {
+            controlFlow: [/\bif\b/, /\bfor\b/, /\bwhile\b/, /\bexcept\b/, /\bwith\b/],
+            nestingStart: /:\s*$/, // Lines ending in colon increase nesting
+            nestingEnd: null, // Python uses indentation, visualized via indent counting
+            comments: /^\s*#/,
+            advanced: [
+                { name: "Decorators", regex: /@\w+/ },
+                { name: "Generators", regex: /\byield\b/ },
+                { name: "List Comprehensions", regex: /\[.* for .* in .*\]/ },
+                { name: "Type Aliases", regex: /TypeAlias|NewType/ },
+                { name: "Async/Await", regex: /\basync def\b/ }
+            ]
+        },
+        Rust: {
+            controlFlow: [/\bif\b/, /\bfor\b/, /\bwhile\b/, /\bmatch\b/, /\bloop\b/],
+            nestingStart: /\{\s*$/,
+            nestingEnd: /^\s*\}/,
+            comments: /^\s*\/\//,
+            advanced: [
+                { name: "Lifetimes", regex: /<\s*'\w+\s*>/ },
+                { name: "Traits", regex: /\bimpl\b.*\bfor\b/ },
+                { name: "Macros", regex: /\w+!/ },
+                { name: "Smart Pointers", regex: /Box|Rc|Arc|Mutex/ },
+                { name: "Pattern Matching", regex: /\bmatch\b/ }
+            ]
+        },
+        React: {
+            controlFlow: [/\bif\b/, /\bfor\b/, /\bwhile\b/, /\bswitch\b/],
+            nestingStart: /\{\s*$/,
+            nestingEnd: /^\s*\}/,
+            comments: /^\s*\/\//,
+            advanced: [
+                { name: "Custom Hooks", regex: /\buse[A-Z]\w+/ },
+                { name: "Context API", regex: /\bcreateContext\b|\buseContext\b/ },
+                { name: "Reducers", regex: /\buseReducer\b/ },
+                { name: "Memoization", regex: /\buseMemo\b|\buseCallback\b/ },
+                { name: "TypeScript Generics", regex: /<[A-Z]\w+>/ }
+            ]
+        }
+    };
+
+    const config = patterns[skill as keyof typeof patterns] || patterns.Python;
+
+    // First pass: scan lines for complexity and comments
+    for (const line of lines) {
+        if (!line.trim()) continue;
+
+        // Check for comments
+        if (config.comments.test(line)) {
+            commentLines++;
+            continue;
+        }
+        codeLines++;
+
+        // Complexity (Control Flow)
+        for (const pattern of config.controlFlow) {
+            if (pattern.test(line)) complexity++;
+        }
+
+        // Nesting Depth (Approximation)
+        if (skill === 'Python') {
+            const indent = line.search(/\S/);
+            if (indent > -1) {
+                const depth = Math.floor(indent / 4); // Assume 4 spaces
+                if (depth > maxNesting) maxNesting = depth;
+            }
+        } else {
+            // Brackets based languages
+            if (line.includes('{')) currentNesting++;
+            if (line.includes('}')) currentNesting--;
+            if (currentNesting > maxNesting) maxNesting = currentNesting;
+        }
+
+        // Advanced Concepts
+        for (const concept of config.advanced) {
+            if (concept.regex.test(line) && !concepts.includes(concept.name)) {
+                concepts.push(concept.name);
+            }
+        }
+    }
+
+    // Penalize excessive nesting (Spaghetti code)
+    if (maxNesting > 4) complexity += (maxNesting - 4) * 2;
+
+    const totalLines = commentLines + codeLines;
+    const commentRatio = totalLines > 0 ? commentLines / totalLines : 0;
+
+    return { complexity, concepts, commentRatio };
+}
+
 // Analyze code quality with skill validation
 function analyzeCodeQuality(code: string, skill: string, fileExtension: string = ''): { score: number; issues: string[]; skillMatch: { matches: boolean; confidence: number; evidence: string[] } } {
     const skillMatch = validateSkillMatch(code, skill, fileExtension);
@@ -290,16 +392,48 @@ function analyzeCodeQuality(code: string, skill: string, fileExtension: string =
     }
 
     issues.push(...skillMatch.evidence);
-    score += 20;
+    score += 10; // Base match score
+
+    // Advanced Metrics Calculation
+    const metrics = calculateComplexity(code, skill);
+
+    // 1. Logic / Complexity Score
+    if (metrics.complexity > 15) {
+        score -= 20;
+        issues.push(`⚠️ High Cyclomatic Complexity (${metrics.complexity}): Code logic is hard to follow`);
+    } else if (metrics.complexity > 8) {
+        score -= 10;
+        issues.push(`⚠️ Moderate Complexity (${metrics.complexity})`);
+    } else {
+        score += 10;
+        issues.push(`✓ Clean Logic (Low Complexity: ${metrics.complexity})`);
+    }
+
+    // 2. Readability / Comments Score
+    if (metrics.commentRatio > 0.1) {
+        score += 15; // >10% comments
+        issues.push(`✓ Good Documentation (${Math.round(metrics.commentRatio * 100)}% comment ratio)`);
+    } else if (metrics.commentRatio > 0.05) {
+        score += 5;
+    } else {
+        issues.push(`⚠ Low Comment Density (${Math.round(metrics.commentRatio * 100)}%)`);
+    }
+
+    // 3. Advanced Concepts Score
+    if (metrics.concepts.length > 0) {
+        score += 20; // +20 for using advanced features
+        issues.push(`✓ Advanced Concepts: ${metrics.concepts.join(', ')}`);
+    }
 
     const lines = code.split('\n').filter(line => line.trim().length > 0);
     if (lines.length < 20) {
         score -= 15;
         issues.push("⚠ Codebase is very small");
-    } else if (lines.length > 100) {
-        score += 10;
-        issues.push(`✓ Substantial codebase (${lines.length} lines)`);
+    } else if (lines.length > 200) {
+        issues.push(`✓ Substantial module (${lines.length} lines)`);
     }
+
+    // Skill-specific quality checks (Legacy checks preserved for extra detail)
 
     // Skill-specific quality checks
     if (skill === 'Rust') {
@@ -787,32 +921,33 @@ export async function GET(request: Request) {
                 }
             }
 
+
+            // Calculate evidence hash early for use in responses
+            const evidenceHash = `ev:${evidenceType}:${Buffer.from(evidenceUrl).toString('base64').slice(0, 20)}`;
+
             if (shouldFail) {
                 // FAIL: Evidence does not match claimed skill
-                result.score = 0;
-                result.level = "Failed";
-                result.feedback = [
-                    "❌ EVALUATION FAILED: Evidence does not match claimed skill",
-                    "",
-                    `Claimed Skill: ${skill}`,
-                    `Confidence Level: ${Math.round(codeQuality.skillMatch.confidence)}%`,
-                    `Required: ≥ ${validationThreshold}%`,
-                    "",
-                    "Analysis Results:",
-                    ...codeQuality.issues,
-                    "",
-                    "⚠️ Cannot mint credential - evidence does not prove this skill",
-                    "Please submit a repository that actually contains " + skill + " code"
-                ];
-                // Still return owner info for display
+                // We return immediately to avoid giving partial credit for metadata
                 return NextResponse.json({
                     score: 0,
                     level: "Failed",
-                    feedback: result.feedback,
+                    feedback: [
+                        "❌ EVALUATION FAILED: Evidence does not match claimed skill",
+                        "",
+                        `Claimed Skill: ${skill}`,
+                        `Match Confidence: ${Math.round(codeQuality.skillMatch.confidence)}%`,
+                        `Required Threshold: ≥ ${validationThreshold}%`,
+                        "",
+                        "Analysis Results:",
+                        ...codeQuality.issues,
+                        "",
+                        "⚠️ Cannot mint credential - evidence does not prove this skill",
+                        "Please submit a repository that actually contains " + skill + " code"
+                    ],
                     owner: result.owner,
                     ownerUsername: owner,
                     languages: result.languages,
-                    evidenceHash: `ev:github:${Buffer.from(evidenceUrl).toString('base64').slice(0, 20)}`,
+                    evidenceHash: evidenceHash,
                     evidenceType: 'github',
                     rubric: RUBRICS[skill] || RUBRICS.Python,
                     repositoryInfo: repoData ? {
@@ -899,23 +1034,32 @@ export async function GET(request: Request) {
                 logicScore -= 10;
                 feedback.push("⚠ Low activity - last updated > 6 months ago");
             }
-            if (repoData.stargazers_count > 20) {
+            
+            // ADJUSTED: More lenient scoring for student/hackathon projects
+            if (repoData.stargazers_count > 5) {
                 logicScore += 15;
                 feedback.push(`✓ Strong community interest: ${repoData.stargazers_count} stars ⭐`);
-            } else if (repoData.stargazers_count > 5) {
+            } else if (repoData.stargazers_count > 0) {
                 logicScore += 10;
-                feedback.push(`✓ Community interest: ${repoData.stargazers_count} stars ⭐`);
+                feedback.push(`✓ Has community interest: ${repoData.stargazers_count} stars ⭐`);
+            } else {
+                // No penalty for 0 stars, just neutral
+                feedback.push("ℹ New project (0 stars)");
             }
-            if (repoData.forks_count > 5) {
-                logicScore += 10;
-                feedback.push(`✓ Active forks: ${repoData.forks_count}`);
-            } else if (repoData.forks_count > 0) {
+
+            if (repoData.forks_count > 0) {
                 logicScore += 5;
+                feedback.push(`✓ Forked by others: ${repoData.forks_count}`);
             }
+            
             if (contributorsCount > 1) {
                 logicScore += 10;
                 feedback.push(`✓ Collaborative project: ${contributorsCount} contributors`);
+            } else {
+                logicScore += 5; // Solopreneur bonus
+                feedback.push("ℹ Solo project");
             }
+            
             totalScore += (logicScore * rubric.criteria[1].weight) / 100;
 
             // 4. Use of Concepts / Code Quality (20%)
