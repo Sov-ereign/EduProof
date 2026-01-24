@@ -33,7 +33,25 @@ EduProof Zero is a Web3-based system that issues tamper-proof, wallet-bound cred
 npm install
 ```
 
-### 2. Deploy Smart Contract (Optional)
+### 2. Configure Environment (Recommended)
+
+To avoid GitHub API rate limits (which cause 403 errors), create a `.env.local` file in the root directory:
+
+```bash
+touch .env.local
+```
+
+Add your GitHub Personal Access Token:
+
+```env
+GITHUB_TOKEN=your_github_token_here
+```
+
+1. Go to [GitHub Settings > Developer settings > Personal access tokens > Tokens (classic)](https://github.com/settings/tokens)
+2. Generate a new token with `public_repo` scope.
+3. Paste it into `.env.local`.
+
+### 3. Deploy Smart Contract (Optional)
 
 If you want to deploy your own contract:
 
