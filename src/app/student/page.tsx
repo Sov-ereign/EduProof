@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import { CheckCircle, Upload, Loader2, Github, FileText, Video, Link as LinkIcon, ExternalLink, AlertCircle, X } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
+import { CheckCircle, Upload, Loader2, Github, FileText, Video, Link as LinkIcon, ExternalLink, AlertCircle, X, FileCode, TrendingUp, Award, BarChart3 } from "lucide-react";
 import { connectWallet } from "@/lib/stellar";
 import Certificate from "@/components/Certificate";
 
@@ -170,7 +170,7 @@ export default function StudentDashboard() {
             );
 
             setMintSuccess(txResult);
-            
+
             // Prepare certificate data
             const userName = result.owner || wallet?.slice(0, 8) + "..." + wallet?.slice(-4) || "Student";
             setCertificateData({
@@ -178,18 +178,18 @@ export default function StudentDashboard() {
                 skill: selectedSkill,
                 level: result.level,
                 score: result.score,
-                date: new Date().toLocaleDateString('en-US', { 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
+                date: new Date().toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
                 }),
                 transactionHash: txResult.hash,
                 explorerUrl: txResult.explorerUrl,
             });
-            
+
             // Show certificate
             setShowCertificate(true);
-            
+
             setResult(null); // Clear result to allow new submission
             setEvidenceLink(""); // Clear evidence link
         } catch (e: any) {
@@ -312,8 +312,8 @@ export default function StudentDashboard() {
                                             setResult(null);
                                         }}
                                         className={`px-4 py-3 rounded-lg border transition ${selectedSkill === skill.name
-                                                ? "border-purple-500 bg-purple-500/20 text-white"
-                                                : "border-gray-700 hover:border-gray-500 text-gray-400"
+                                            ? "border-purple-500 bg-purple-500/20 text-white"
+                                            : "border-gray-700 hover:border-gray-500 text-gray-400"
                                             }`}
                                     >
                                         {skill.name}
@@ -347,8 +347,8 @@ export default function StudentDashboard() {
                             onClick={handleSubmit}
                             disabled={isButtonDisabled}
                             className={`w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition ${isButtonDisabled
-                                    ? "bg-gray-800 text-gray-500 cursor-not-allowed"
-                                    : "bg-white text-black hover:bg-gray-200"
+                                ? "bg-gray-800 text-gray-500 cursor-not-allowed"
+                                : "bg-white text-black hover:bg-gray-200"
                                 }`}
                         >
                             {analyzing ? (
@@ -412,123 +412,12 @@ export default function StudentDashboard() {
                                 </div>
                             ) : (
                                 // SUCCESSFUL EVALUATION
-                                <>
-                                    <div className="flex items-center justify-between mb-6">
-                                        <div>
-                                            <h3 className="text-4xl font-bold text-white mb-1">{result.score}/100</h3>
-                                            <p className="text-green-400 font-medium text-lg">{result.level}</p>
-                                        </div>
-                                        <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center border-2 border-green-500/30">
-                                            <CheckCircle className="w-10 h-10 text-green-500" />
-                                        </div>
-                                    </div>
-
-                                    {result.owner && result.owner !== 'External' && (
-                                        <div className="bg-gradient-to-r from-purple-500/10 to-indigo-500/10 rounded-lg p-4 mb-4 border border-purple-500/20">
-                                            <p className="text-xs text-gray-400 mb-2">Repository Owner</p>
-                                            <div className="flex items-center gap-2 flex-wrap mb-3">
-                                                <p className="text-white font-semibold text-sm">{result.owner}</p>
-                                                {result.ownerUsername && (
-                                                    <a
-                                                        href={`https://github.com/${result.ownerUsername}`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="text-purple-400 hover:text-purple-300 text-xs flex items-center gap-1"
-                                                    >
-                                                        @{result.ownerUsername}
-                                                        <ExternalLink className="w-3 h-3" />
-                                                    </a>
-                                                )}
-                                            </div>
-                                            {result.repositoryInfo && (
-                                                <div className="flex gap-4 text-xs text-gray-400 mb-3">
-                                                    {result.repositoryInfo.stars !== undefined && (
-                                                        <span>⭐ {result.repositoryInfo.stars} stars</span>
-                                                    )}
-                                                    {result.repositoryInfo.forks !== undefined && (
-                                                        <span>🍴 {result.repositoryInfo.forks} forks</span>
-                                                    )}
-                                                    {result.repositoryInfo.openIssues !== undefined && (
-                                                        <span>📝 {result.repositoryInfo.openIssues} issues</span>
-                                                    )}
-                                                </div>
-                                            )}
-                                            {result.languages && Object.keys(result.languages).length > 0 && (
-                                                <div>
-                                                    <p className="text-xs text-gray-500 mb-2">Languages Used:</p>
-                                                    <div className="flex h-2 rounded-full overflow-hidden bg-gray-800">
-                                                        {Object.entries(result.languages).slice(0, 3).map(([lang, bytes]: [string, any], i) => {
-                                                            const total: number = Object.values(result.languages).reduce((a: any, b: any) => a + b, 0) as number;
-                                                            const percent = (bytes / total) * 100;
-                                                            const colors = ["bg-blue-500", "bg-yellow-500", "bg-purple-500"];
-                                                            return (
-                                                                <div
-                                                                    key={lang}
-                                                                    style={{ width: `${percent}%` }}
-                                                                    className={colors[i % colors.length]}
-                                                                    title={`${lang}: ${Math.round(percent)}%`}
-                                                                />
-                                                            );
-                                                        })}
-                                                    </div>
-                                                    <div className="flex gap-3 mt-2 text-xs text-gray-400">
-                                                        {Object.keys(result.languages).slice(0, 3).map((lang, i) => (
-                                                            <span key={lang} className="flex items-center gap-1">
-                                                                <div className={`w-2 h-2 rounded-full ${["bg-blue-500", "bg-yellow-500", "bg-purple-500"][i]}`} />
-                                                                {lang}
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {result.rubric && (
-                                        <div className="bg-black/30 rounded-lg p-4 mb-4">
-                                            <p className="text-xs text-gray-400 mb-2">Evaluation Rubric: {result.rubric.name}</p>
-                                            <div className="space-y-2">
-                                                {result.rubric.criteria.map((c: any, i: number) => (
-                                                    <div key={i} className="flex justify-between text-xs">
-                                                        <span className="text-gray-400">{c.name}</span>
-                                                        <span className="text-gray-500">{c.weight}%</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    <div className="bg-black/30 rounded-lg p-4 mb-6 flex-1">
-                                        <p className="text-sm text-gray-400 mb-3 font-medium">AI Analysis:</p>
-                                        <ul className="text-sm space-y-2">
-                                            {result.feedback.map((f: string, i: number) => (
-                                                <li key={i} className="flex items-start gap-2">
-                                                    <span className="text-purple-500 mt-1">•</span>
-                                                    <span className="text-gray-300">{f}</span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-
-                                    <button
-                                        onClick={handleMint}
-                                        disabled={minting || result.score < 70}
-                                        className={`w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:opacity-90 py-4 rounded-xl font-bold text-white shadow-lg shadow-purple-900/20 transition flex items-center justify-center gap-2 ${
-                                            minting || result.score < 70 ? "opacity-50 cursor-not-allowed" : ""
-                                        }`}
-                                    >
-                                        {minting ? (
-                                            <>
-                                                <Loader2 className="w-5 h-5 animate-spin" />
-                                                Minting Credential...
-                                            </>
-                                        ) : result.score < 70 ? (
-                                            `Score too low to mint (need ≥70, got ${result.score})`
-                                        ) : (
-                                            "Mint Credential NFT"
-                                        )}
-                                    </button>
-                                </>
+                                <EvaluationResults
+                                    result={result}
+                                    selectedSkill={selectedSkill}
+                                    onMint={handleMint}
+                                    minting={minting}
+                                />
                             )}
                         </motion.div>
                     )}
@@ -537,3 +426,394 @@ export default function StudentDashboard() {
         </div>
     );
 }
+
+// Enhanced Evaluation Results Component
+function EvaluationResults({
+    result,
+    selectedSkill,
+    onMint,
+    minting
+}: {
+    result: any;
+    selectedSkill: string;
+    onMint: () => void;
+    minting: boolean;
+}) {
+    const [scoreDisplay, setScoreDisplay] = useState(0);
+    const score = result.score || 0;
+
+    // Animate score counter
+    useEffect(() => {
+        const duration = 1500;
+        const steps = 60;
+        const increment = score / steps;
+        let current = 0;
+        const timer = setInterval(() => {
+            current += increment;
+            if (current >= score) {
+                setScoreDisplay(score);
+                clearInterval(timer);
+            } else {
+                setScoreDisplay(Math.floor(current));
+            }
+        }, duration / steps);
+        return () => clearInterval(timer);
+    }, [score]);
+
+    // Parse feedback to extract scores and files
+    const parsedData = useMemo(() => {
+        const files: Array<{ path: string; lines: number; size: string }> = [];
+        const criteriaScores: Array<{ name: string; score: number; weight: number }> = [];
+        const feedbackItems: string[] = [];
+        let inFilesSection = false;
+
+        result.feedback?.forEach((f: string) => {
+            // Extract files analyzed
+            if (f.includes('📁 FILES ANALYZED')) {
+                inFilesSection = true;
+                return;
+            }
+            if (inFilesSection && f.match(/^\s*\d+\.\s+/)) {
+                const match = f.match(/(\d+)\.\s+(.+?)\s+\((\d+)\s+lines,\s+(.+?)\)/);
+                if (match) {
+                    files.push({
+                        path: match[2],
+                        lines: parseInt(match[3]),
+                        size: match[4]
+                    });
+                }
+                if (f.trim() === '') inFilesSection = false;
+                return;
+            }
+            if (f.trim() === '' && inFilesSection) {
+                inFilesSection = false;
+                return;
+            }
+
+            // Extract criteria scores
+            const scoreMatch = f.match(/📊\s+(.+?):\s+(\d+)\/100\s+\((\d+)%\s+weight\)/);
+            if (scoreMatch) {
+                criteriaScores.push({
+                    name: scoreMatch[1],
+                    score: parseInt(scoreMatch[2]),
+                    weight: parseInt(scoreMatch[3])
+                });
+                return;
+            }
+
+            // Regular feedback
+            if (!f.includes('📁') && !f.includes('📊') && f.trim() !== '') {
+                feedbackItems.push(f);
+            }
+        });
+
+        return { files, criteriaScores, feedbackItems };
+    }, [result.feedback]);
+
+    const getScoreColor = (score: number) => {
+        if (score >= 90) return "text-green-400";
+        if (score >= 80) return "text-blue-400";
+        if (score >= 70) return "text-yellow-400";
+        return "text-orange-400";
+    };
+
+    const getLevelBadgeColor = (level: string) => {
+        switch (level) {
+            case "Expert": return "from-purple-500 to-pink-500";
+            case "Advanced": return "from-blue-500 to-cyan-500";
+            case "Intermediate": return "from-green-500 to-emerald-500";
+            default: return "from-gray-500 to-gray-600";
+        }
+    };
+
+    return (
+        <div className="flex-1 flex flex-col space-y-6 overflow-y-auto">
+            {/* Score Header with Animation */}
+            <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.5 }}
+                className="relative bg-gradient-to-br from-gray-900 via-purple-900/20 to-gray-900 rounded-2xl p-6 border border-purple-500/30 overflow-hidden"
+            >
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-transparent to-indigo-500/10 animate-pulse" />
+                <div className="relative flex items-center justify-between">
+                    <div>
+                        <motion.div
+                            initial={{ opacity: 0, y: -20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.2 }}
+                            className="flex items-baseline gap-2 mb-2"
+                        >
+                            <h3 className={`text-6xl font-bold ${getScoreColor(score)}`}>
+                                {scoreDisplay}
+                            </h3>
+                            <span className="text-3xl text-gray-500">/100</span>
+                        </motion.div>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.4 }}
+                            className={`inline-block bg-gradient-to-r ${getLevelBadgeColor(result.level)} px-4 py-1.5 rounded-full text-white font-semibold text-sm shadow-lg`}
+                        >
+                            <Award className="w-4 h-4 inline mr-1.5" />
+                            {result.level}
+                        </motion.div>
+                    </div>
+                    <motion.div
+                        initial={{ scale: 0, rotate: -180 }}
+                        animate={{ scale: 1, rotate: 0 }}
+                        transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
+                        className="w-24 h-24 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-full flex items-center justify-center border-2 border-green-500/50 shadow-lg shadow-green-500/20"
+                    >
+                        <CheckCircle className="w-12 h-12 text-green-400" />
+                    </motion.div>
+                </div>
+
+                {/* Circular Progress Indicator */}
+                <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.5, type: "spring" }}
+                    className="mt-6"
+                >
+                    <div className="relative w-full h-3 bg-gray-800 rounded-full overflow-hidden">
+                        <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${score}%` }}
+                            transition={{ duration: 1.5, delay: 0.3, ease: "easeOut" }}
+                            className={`h-full bg-gradient-to-r ${getLevelBadgeColor(result.level)} rounded-full shadow-lg`}
+                        />
+                    </div>
+                </motion.div>
+            </motion.div>
+
+            {/* Repository Info */}
+            {result.owner && result.owner !== 'External' && (
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="bg-gradient-to-r from-purple-500/10 to-indigo-500/10 rounded-xl p-5 border border-purple-500/20"
+                >
+                    <p className="text-xs text-gray-400 mb-3 font-medium uppercase tracking-wider">Repository Owner</p>
+                    <div className="flex items-center gap-2 flex-wrap mb-4">
+                        <p className="text-white font-semibold">{result.owner}</p>
+                        {result.ownerUsername && (
+                            <a
+                                href={`https://github.com/${result.ownerUsername}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-purple-400 hover:text-purple-300 text-sm flex items-center gap-1 transition"
+                            >
+                                @{result.ownerUsername}
+                                <ExternalLink className="w-3 h-3" />
+                            </a>
+                        )}
+                    </div>
+                    {result.repositoryInfo && (
+                        <div className="flex gap-6 text-sm text-gray-400 mb-4">
+                            {result.repositoryInfo.stars !== undefined && (
+                                <span className="flex items-center gap-1.5">
+                                    <span className="text-yellow-400">⭐</span>
+                                    {result.repositoryInfo.stars} stars
+                                </span>
+                            )}
+                            {result.repositoryInfo.forks !== undefined && (
+                                <span className="flex items-center gap-1.5">
+                                    <span>🍴</span>
+                                    {result.repositoryInfo.forks} forks
+                                </span>
+                            )}
+                            {result.repositoryInfo.openIssues !== undefined && (
+                                <span className="flex items-center gap-1.5">
+                                    <span>📝</span>
+                                    {result.repositoryInfo.openIssues} issues
+                                </span>
+                            )}
+                        </div>
+                    )}
+                    {result.languages && Object.keys(result.languages).length > 0 && (
+                        <div>
+                            <p className="text-xs text-gray-500 mb-2 font-medium">Languages Used:</p>
+                            <div className="flex h-3 rounded-full overflow-hidden bg-gray-800 shadow-inner">
+                                {Object.entries(result.languages).slice(0, 3).map(([lang, bytes]: [string, any], i) => {
+                                    const total: number = Object.values(result.languages).reduce((a: any, b: any) => a + b, 0) as number;
+                                    const percent = (bytes / total) * 100;
+                                    const colors = ["bg-blue-500", "bg-yellow-500", "bg-purple-500", "bg-green-500"];
+                                    return (
+                                        <motion.div
+                                            key={lang}
+                                            initial={{ width: 0 }}
+                                            animate={{ width: `${percent}%` }}
+                                            transition={{ duration: 0.8, delay: 0.5 + i * 0.1 }}
+                                            className={`${colors[i % colors.length]} h-full`}
+                                            title={`${lang}: ${Math.round(percent)}%`}
+                                        />
+                                    );
+                                })}
+                            </div>
+                            <div className="flex gap-4 mt-2 text-xs text-gray-400">
+                                {Object.keys(result.languages).slice(0, 3).map((lang, i) => (
+                                    <span key={lang} className="flex items-center gap-1.5">
+                                        <div className={`w-2 h-2 rounded-full ${["bg-blue-500", "bg-yellow-500", "bg-purple-500"][i]}`} />
+                                        {lang}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </motion.div>
+            )}
+
+            {/* Criteria Scores with Progress Bars */}
+            {parsedData.criteriaScores.length > 0 && (
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="bg-black/40 rounded-xl p-5 border border-gray-800"
+                >
+                    <div className="flex items-center gap-2 mb-4">
+                        <BarChart3 className="w-5 h-5 text-purple-400" />
+                        <p className="text-sm font-semibold text-gray-300">Evaluation Rubric: {result.rubric?.name || selectedSkill}</p>
+                    </div>
+                    <div className="space-y-4">
+                        {parsedData.criteriaScores.map((criteria, i) => (
+                            <motion.div
+                                key={i}
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.4 + i * 0.1 }}
+                            >
+                                <div className="flex justify-between items-center mb-2">
+                                    <span className="text-sm text-gray-300 font-medium">{criteria.name}</span>
+                                    <div className="flex items-center gap-2">
+                                        <span className={`text-sm font-bold ${getScoreColor(criteria.score)}`}>
+                                            {criteria.score}/100
+                                        </span>
+                                        <span className="text-xs text-gray-500">({criteria.weight}%)</span>
+                                    </div>
+                                </div>
+                                <div className="relative w-full h-2.5 bg-gray-800 rounded-full overflow-hidden">
+                                    <motion.div
+                                        initial={{ width: 0 }}
+                                        animate={{ width: `${criteria.score}%` }}
+                                        transition={{ duration: 1, delay: 0.5 + i * 0.1, ease: "easeOut" }}
+                                        className={`h-full bg-gradient-to-r ${getLevelBadgeColor(result.level)} rounded-full`}
+                                    />
+                                </div>
+                            </motion.div>
+                        ))}
+                    </div>
+                </motion.div>
+            )}
+
+            {/* Files Analyzed */}
+            {parsedData.files.length > 0 && (
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4 }}
+                    className="bg-gradient-to-br from-gray-900/50 to-black/50 rounded-xl p-5 border border-gray-800"
+                >
+                    <div className="flex items-center gap-2 mb-4">
+                        <FileCode className="w-5 h-5 text-blue-400" />
+                        <p className="text-sm font-semibold text-gray-300">
+                            Files Analyzed ({parsedData.files.length})
+                        </p>
+                    </div>
+                    <div className="max-h-48 overflow-y-auto space-y-2 custom-scrollbar">
+                        {parsedData.files.map((file, i) => (
+                            <motion.div
+                                key={i}
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.5 + i * 0.05 }}
+                                className="flex items-center justify-between bg-gray-800/50 rounded-lg p-3 hover:bg-gray-800/70 transition"
+                            >
+                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                    <FileCode className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                                    <span className="text-xs text-gray-300 font-mono truncate">{file.path}</span>
+                                </div>
+                                <div className="flex items-center gap-3 text-xs text-gray-500 ml-3">
+                                    <span>{file.lines} lines</span>
+                                    <span>•</span>
+                                    <span>{file.size}</span>
+                                </div>
+                            </motion.div>
+                        ))}
+                    </div>
+                </motion.div>
+            )}
+
+            {/* AI Analysis Feedback */}
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                className="bg-black/40 rounded-xl p-5 border border-gray-800 flex-1 min-h-0 flex flex-col"
+            >
+                <div className="flex items-center gap-2 mb-4">
+                    <TrendingUp className="w-5 h-5 text-green-400" />
+                    <p className="text-sm font-semibold text-gray-300">AI Analysis</p>
+                </div>
+                <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar">
+                    {parsedData.feedbackItems.map((f: string, i: number) => {
+                        const isPositive = f.includes('✓') || f.includes('✓');
+                        const isWarning = f.includes('⚠') || f.includes('⚠️');
+                        const isError = f.includes('❌');
+
+                        return (
+                            <motion.div
+                                key={i}
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.6 + i * 0.03 }}
+                                className={`flex items-start gap-2 text-sm p-2 rounded-lg ${isPositive ? 'bg-green-500/10 text-green-300' :
+                                        isWarning ? 'bg-yellow-500/10 text-yellow-300' :
+                                            isError ? 'bg-red-500/10 text-red-300' :
+                                                'text-gray-300'
+                                    }`}
+                            >
+                                <span className={`mt-0.5 flex-shrink-0 ${isPositive ? 'text-green-400' :
+                                        isWarning ? 'text-yellow-400' :
+                                            isError ? 'text-red-400' :
+                                                'text-purple-400'
+                                    }`}>
+                                    {isPositive ? '✓' : isWarning ? '⚠' : isError ? '❌' : '•'}
+                                </span>
+                                <span className="flex-1">{f.replace(/^[✓⚠❌•]\s*/, '')}</span>
+                            </motion.div>
+                        );
+                    })}
+                </div>
+            </motion.div>
+
+            {/* Mint Button */}
+            <motion.button
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7 }}
+                onClick={onMint}
+                disabled={minting || result.score < 70}
+                className={`w-full bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:opacity-90 py-4 rounded-xl font-bold text-white shadow-lg shadow-purple-900/30 transition-all flex items-center justify-center gap-2 ${minting || result.score < 70 ? "opacity-50 cursor-not-allowed" : "hover:scale-[1.02] active:scale-[0.98]"
+                    }`}
+            >
+                {minting ? (
+                    <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Minting Credential...
+                    </>
+                ) : result.score < 70 ? (
+                    `Score too low to mint (need ≥70, got ${result.score})`
+                ) : (
+                    <>
+                        <Award className="w-5 h-5" />
+                        Mint Credential NFT
+                    </>
+                )}
+            </motion.button>
+        </div>
+    );
+}
+
