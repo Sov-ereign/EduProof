@@ -276,59 +276,89 @@ export default function StudentDashboard() {
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 text-slate-900 relative">
-            {/* Background pattern */}
-            <div className="fixed inset-0 opacity-40 -z-10 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:24px_24px]" />
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50/30 to-indigo-50/50 text-slate-900 relative overflow-hidden">
+            {/* Animated background gradient */}
+            <div className="fixed inset-0 -z-10">
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-purple-200/20 via-transparent to-transparent" />
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-indigo-200/20 via-transparent to-transparent" />
+                <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]" />
+            </div>
 
-            <div className="max-w-7xl mx-auto px-6 py-12">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
                 {/* Header */}
                 <ScrollReveal direction="down" threshold={0.1}>
-                    <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-12 pb-8 border-b border-slate-200">
-                        <div>
-                            <h1 className="text-3xl md:text-5xl font-black mb-3 text-slate-900 tracking-tight">Prove Your Skill</h1>
-                            <div className="flex items-center gap-3 text-sm md:text-base text-slate-500 font-medium">
-                                <div className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
-                                <span>Welcome, <span className="text-slate-900 font-bold">{session.user?.name}</span></span>
-                                <button onClick={() => signOut()} className="text-xs text-red-500 hover:bg-red-50 font-bold ml-4 border border-red-200 px-3 py-1.5 rounded-lg transition-colors">Sign Out</button>
+                    <header className="relative mb-10 sm:mb-12">
+                        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-8">
+                            <div className="space-y-3">
+                                <motion.h1 
+                                    initial={{ opacity: 0, y: -20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="text-4xl sm:text-5xl lg:text-6xl font-black bg-gradient-to-r from-slate-900 via-purple-900 to-indigo-900 bg-clip-text text-transparent tracking-tight"
+                                >
+                                    Prove Your Skill
+                                </motion.h1>
+                                <div className="flex items-center gap-3 flex-wrap">
+                                    <div className="flex items-center gap-2 px-3 py-1.5 bg-white/80 backdrop-blur-sm rounded-full border border-slate-200/50 shadow-sm">
+                                        <div className="w-2 h-2 rounded-full bg-gradient-to-r from-purple-500 to-indigo-500 animate-pulse" />
+                                        <span className="text-sm font-semibold text-slate-700">
+                                            Welcome, <span className="text-slate-900">{session.user?.name}</span>
+                                        </span>
+                                    </div>
+                                    <button 
+                                        onClick={() => signOut()} 
+                                        className="text-xs text-red-600 hover:bg-red-50 font-semibold px-3 py-1.5 rounded-full border border-red-200/50 transition-all hover:border-red-300"
+                                    >
+                                        Sign Out
+                                    </button>
+                                </div>
                             </div>
+                            {!wallet ? (
+                                <motion.button
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    whileHover={{ y: -2, scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                    onClick={handleConnect}
+                                    className="group relative px-6 sm:px-8 py-3.5 sm:py-4 bg-gradient-to-r from-purple-600 via-purple-600 to-indigo-600 text-white rounded-2xl font-bold transition-all flex items-center gap-3 shadow-xl shadow-purple-500/30 hover:shadow-2xl hover:shadow-purple-500/40"
+                                >
+                                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-purple-400 to-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity blur-xl" />
+                                    <Wallet className="w-5 h-5 relative z-10" />
+                                    <span className="hidden sm:inline relative z-10">Connect Wallet</span>
+                                    <span className="sm:hidden relative z-10">Connect</span>
+                                </motion.button>
+                            ) : (
+                                <motion.div
+                                    initial={{ scale: 0.9, opacity: 0 }}
+                                    animate={{ scale: 1, opacity: 1 }}
+                                    className="flex items-center gap-3 px-5 py-3 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200/50 rounded-2xl shadow-lg backdrop-blur-sm"
+                                >
+                                    <div className="relative">
+                                        <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
+                                        <div className="absolute inset-0 w-3 h-3 rounded-full bg-emerald-400 animate-ping" />
+                                    </div>
+                                    <span className="font-mono text-sm font-bold text-emerald-900">{wallet.slice(0, 8)}...{wallet.slice(-6)}</span>
+                                </motion.div>
+                            )}
                         </div>
-                        {!wallet ? (
-                            <motion.button
-                                whileHover={{ y: -2 }}
-                                whileTap={{ scale: 0.98 }}
-                                onClick={handleConnect}
-                                className="group relative px-8 py-4 bg-purple-600 text-white rounded-2xl font-bold transition-all flex items-center gap-3 shadow-lg shadow-purple-200 hover:bg-purple-700"
-                            >
-                                <Wallet className="w-5 h-5" />
-                                <span className="hidden sm:inline">Connect Freighter Wallet</span>
-                                <span className="sm:hidden">Connect</span>
-                            </motion.button>
-                        ) : (
-                            <motion.div
-                                initial={{ scale: 0.9, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                className="flex items-center gap-4 text-emerald-700 bg-emerald-50 px-6 py-4 rounded-2xl border border-emerald-100 shadow-sm"
-                            >
-                                <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse shadow-lg shadow-emerald-400" />
-                                <span className="font-mono text-sm font-bold">{wallet.slice(0, 8)}...{wallet.slice(-6)}</span>
-                            </motion.div>
-                        )}
+                        <div className="h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
                     </header>
                 </ScrollReveal>
 
                 {error && (
                     <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0 }}
-                        className="mb-4 md:mb-6 bg-red-500/10 border border-red-500/50 p-3 md:p-4 rounded-xl flex items-start gap-3"
+                        initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className="mb-6 bg-gradient-to-r from-red-50 to-rose-50 border border-red-200/50 backdrop-blur-sm p-4 rounded-2xl shadow-lg flex items-start gap-4"
                     >
-                        <AlertCircle className="w-4 h-4 md:w-5 md:h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                        <div className="flex-1 min-w-0">
-                            <p className="text-red-400 font-medium text-sm md:text-base">Error</p>
-                            <p className="text-red-300 text-xs md:text-sm break-words">{error}</p>
+                        <div className="p-2 bg-red-100 rounded-xl">
+                            <AlertCircle className="w-5 h-5 text-red-600" />
                         </div>
-                        <button onClick={() => setError(null)} className="text-red-400 hover:text-red-300 flex-shrink-0">
+                        <div className="flex-1 min-w-0">
+                            <p className="text-red-900 font-bold text-sm mb-1">Error</p>
+                            <p className="text-red-700 text-sm break-words">{error}</p>
+                        </div>
+                        <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 flex-shrink-0 p-1 rounded-lg hover:bg-red-100 transition-colors">
                             <X className="w-4 h-4" />
                         </button>
                     </motion.div>
@@ -336,40 +366,49 @@ export default function StudentDashboard() {
 
                 {mintSuccess && (
                     <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0 }}
-                        className="mb-4 md:mb-6 bg-green-500/10 border border-green-500/50 p-3 md:p-4 rounded-xl"
+                        initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className="mb-6 bg-gradient-to-r from-emerald-50 via-green-50 to-teal-50 border border-emerald-200/50 backdrop-blur-sm p-5 rounded-2xl shadow-xl"
                     >
-                        <div className="flex items-start gap-3">
-                            <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-green-400 flex-shrink-0 mt-0.5" />
+                        <div className="flex items-start gap-4">
+                            <div className="p-2.5 bg-emerald-100 rounded-xl">
+                                <CheckCircle className="w-6 h-6 text-emerald-600" />
+                            </div>
                             <div className="flex-1 min-w-0">
-                                <p className="text-green-400 font-medium text-sm md:text-base">Credential Minted Successfully! 🚀</p>
-                                <p className="text-green-300 text-xs md:text-sm mt-1 break-all">
-                                    Transaction: {mintSuccess.hash?.slice(0, 8)}...{mintSuccess.hash?.slice(-8)}
+                                <p className="text-emerald-900 font-black text-base mb-2 flex items-center gap-2">
+                                    <span>Credential Minted Successfully!</span>
+                                    <span className="text-xl">🚀</span>
                                 </p>
-                                <div className="flex flex-wrap gap-2 md:gap-3 mt-3">
+                                <p className="text-emerald-700 text-sm font-medium mb-4 break-all font-mono bg-white/50 px-3 py-2 rounded-lg border border-emerald-100">
+                                    {mintSuccess.hash?.slice(0, 12)}...{mintSuccess.hash?.slice(-12)}
+                                </p>
+                                <div className="flex flex-wrap gap-3">
                                     {mintSuccess.explorerUrl && (
-                                        <button
+                                        <motion.button
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
                                             onClick={() => setShowCertificate(true)}
-                                            className="bg-purple-600 hover:bg-purple-700 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg text-xs md:text-sm font-medium transition"
+                                            className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-bold transition-all shadow-lg shadow-purple-500/30"
                                         >
                                             View Certificate
-                                        </button>
+                                        </motion.button>
                                     )}
                                     {mintSuccess.explorerUrl && (
-                                        <a
+                                        <motion.a
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
                                             href={mintSuccess.explorerUrl}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="text-green-400 hover:text-green-300 text-xs md:text-sm inline-flex items-center gap-1 px-3 md:px-4 py-1.5 md:py-2 border border-green-500/50 rounded-lg hover:bg-green-500/10 transition"
+                                            className="inline-flex items-center gap-2 px-4 py-2 bg-white border-2 border-emerald-300 text-emerald-700 rounded-xl text-sm font-bold hover:bg-emerald-50 transition-all shadow-sm"
                                         >
-                                            View on Explorer <ExternalLink className="w-3 h-3" />
-                                        </a>
+                                            View on Explorer <ExternalLink className="w-4 h-4" />
+                                        </motion.a>
                                     )}
                                 </div>
                             </div>
-                            <button onClick={() => setMintSuccess(null)} className="text-green-400 hover:text-green-300 flex-shrink-0">
+                            <button onClick={() => setMintSuccess(null)} className="text-emerald-400 hover:text-emerald-600 flex-shrink-0 p-1.5 rounded-lg hover:bg-emerald-100 transition-colors">
                                 <X className="w-4 h-4" />
                             </button>
                         </div>
@@ -390,140 +429,209 @@ export default function StudentDashboard() {
                     />
                 )}
 
-                <div className="max-w-7xl mx-auto grid grid-cols-1 xl:grid-cols-12 gap-8">
-                    {/* Left Col: Submission Form - Takes 4 cols on XL, full width on mobile */}
-                    <div className="xl:col-span-4 bg-white rounded-[2rem] border border-slate-200 p-8 shadow-sm">
-                        <h2 className="text-xl font-bold mb-8 text-slate-900">Prove a Skill</h2>
+                <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 lg:gap-8">
+                    {/* Left Col: Submission Form */}
+                    <div className="xl:col-span-4">
+                        <motion.div
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className="bg-white/80 backdrop-blur-xl rounded-3xl border border-slate-200/50 p-6 sm:p-8 shadow-2xl shadow-slate-900/5"
+                        >
+                            <div className="flex items-center gap-3 mb-8">
+                                <div className="p-2 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-xl">
+                                    <Award className="w-5 h-5 text-purple-600" />
+                                </div>
+                                <h2 className="text-2xl font-black text-slate-900">Prove a Skill</h2>
+                            </div>
 
-                        <div className="space-y-8">
-                            <div>
-                                <label className="block text-slate-600 text-sm font-bold mb-4 uppercase tracking-wider">Select Skill</label>
-                                <div className="grid grid-cols-2 gap-3">
-                                    {SKILLS.map(skill => (
-                                        <motion.button
-                                            key={skill.name}
-                                            whileHover={{ y: -1 }}
-                                            whileTap={{ scale: 0.98 }}
-                                            onClick={() => {
-                                                setSelectedSkill(skill.name);
+                            <div className="space-y-6">
+                                <div>
+                                    <label className="block text-slate-700 text-sm font-bold mb-3">Select Skill</label>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-2 gap-2.5">
+                                        {SKILLS.map(skill => (
+                                            <motion.button
+                                                key={skill.name}
+                                                whileHover={{ y: -2, scale: 1.02 }}
+                                                whileTap={{ scale: 0.98 }}
+                                                onClick={() => {
+                                                    setSelectedSkill(skill.name);
+                                                    setResult(null);
+                                                }}
+                                                className={`px-4 py-3 rounded-xl border-2 font-bold transition-all text-sm relative overflow-hidden ${
+                                                    selectedSkill === skill.name
+                                                        ? "border-purple-500 bg-gradient-to-br from-purple-50 to-indigo-50 text-purple-700 shadow-lg shadow-purple-500/20"
+                                                        : "border-slate-200 bg-slate-50/50 hover:border-slate-300 hover:bg-slate-100 text-slate-600"
+                                                }`}
+                                            >
+                                                {selectedSkill === skill.name && (
+                                                    <motion.div
+                                                        layoutId="selectedSkill"
+                                                        className="absolute inset-0 bg-gradient-to-br from-purple-100/50 to-indigo-100/50"
+                                                        transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                                                    />
+                                                )}
+                                                <span className="relative z-10">{skill.name}</span>
+                                            </motion.button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-slate-700 text-sm font-bold mb-3">Evidence Link</label>
+                                    <div className="relative group">
+                                        <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 group-focus-within:text-purple-600 transition-colors z-10" />
+                                        <input
+                                            type="text"
+                                            placeholder="https://github.com/username/repo"
+                                            value={evidenceLink}
+                                            onChange={(e) => {
+                                                setEvidenceLink(e.target.value);
                                                 setResult(null);
                                             }}
-                                            className={`px-4 py-3 rounded-xl border-2 font-bold transition-all text-sm ${selectedSkill === skill.name
-                                                ? "border-purple-600 bg-purple-50 text-purple-700 shadow-md shadow-purple-50"
-                                                : "border-slate-100 bg-slate-50 hover:border-slate-300 text-slate-500 hover:text-slate-700"
-                                                }`}
-                                        >
-                                            {skill.name}
-                                        </motion.button>
-                                    ))}
+                                            onKeyDown={(e) => e.key === 'Enter' && !isButtonDisabled && handleSubmit()}
+                                            className="w-full bg-gradient-to-br from-slate-50 to-white border-2 border-slate-200 rounded-xl py-3.5 pl-12 pr-4 text-slate-900 text-sm font-medium focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 transition-all shadow-sm"
+                                        />
+                                    </div>
+                                    <p className="text-xs text-slate-500 mt-2.5 font-medium flex items-center gap-2">
+                                        <Github className="w-3.5 h-3.5" />
+                                        GitHub repositories supported
+                                    </p>
                                 </div>
-                            </div>
 
-                            <div>
-                                <label className="block text-slate-600 text-sm font-bold mb-4 uppercase tracking-wider">Evidence Link</label>
-                                <div className="relative group">
-                                    <LinkIcon className="absolute left-4 top-4 text-slate-400 w-5 h-5 group-focus-within:text-purple-600 transition-colors" />
-                                    <input
-                                        type="text"
-                                        placeholder="Paste your evidence URL..."
-                                        value={evidenceLink}
-                                        onChange={(e) => {
-                                            setEvidenceLink(e.target.value);
-                                            setResult(null);
-                                        }}
-                                        onKeyDown={(e) => e.key === 'Enter' && !isButtonDisabled && handleSubmit()}
-                                        className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl py-4 pl-12 pr-4 text-slate-900 text-sm font-medium focus:outline-none focus:border-purple-600 focus:bg-white transition-all shadow-inner"
-                                    />
-                                </div>
-                                <p className="text-xs text-slate-400 mt-3 font-medium flex items-center gap-2">
-                                    <div className="w-1 h-1 rounded-full bg-slate-300" />
-                                    Supports: GitHub, Docs, Loom, Portfolio
-                                </p>
-                            </div>
-
-                            <motion.button
-                                whileHover={!isButtonDisabled ? { y: -2 } : {}}
-                                whileTap={!isButtonDisabled ? { scale: 0.98 } : {}}
-                                onClick={handleSubmit}
-                                disabled={isButtonDisabled}
-                                className={`w-full py-4 rounded-2xl font-black text-sm md:text-base flex items-center justify-center gap-3 transition-all ${isButtonDisabled
-                                    ? "bg-slate-100 text-slate-400 cursor-not-allowed border-2 border-slate-50"
-                                    : "bg-slate-900 text-white hover:bg-slate-800 shadow-xl shadow-slate-100"
+                                <motion.button
+                                    whileHover={!isButtonDisabled ? { y: -2, scale: 1.02 } : {}}
+                                    whileTap={!isButtonDisabled ? { scale: 0.98 } : {}}
+                                    onClick={handleSubmit}
+                                    disabled={isButtonDisabled}
+                                    className={`w-full py-4 rounded-xl font-black text-base flex items-center justify-center gap-3 transition-all relative overflow-hidden ${
+                                        isButtonDisabled
+                                            ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                                            : "bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white hover:shadow-2xl hover:shadow-slate-900/30"
                                     }`}
-                            >
-                                {analyzing ? (
-                                    <>
-                                        <Loader2 className="w-5 h-5 animate-spin" />
-                                        <span>Analyzing Evidence...</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        {getButtonText()}
-                                    </>
-                                )}
-                            </motion.button>
-                        </div>
+                                >
+                                    {!isButtonDisabled && (
+                                        <motion.div
+                                            className="absolute inset-0 bg-gradient-to-r from-purple-600/20 to-indigo-600/20"
+                                            animate={{ x: ['-100%', '100%'] }}
+                                            transition={{ repeat: Infinity, duration: 3, ease: "linear" }}
+                                        />
+                                    )}
+                                    {analyzing ? (
+                                        <>
+                                            <Loader2 className="w-5 h-5 animate-spin relative z-10" />
+                                            <span className="relative z-10">Analyzing Evidence...</span>
+                                        </>
+                                    ) : (
+                                        <span className="relative z-10">{getButtonText()}</span>
+                                    )}
+                                </motion.button>
+                            </div>
+                        </motion.div>
                     </div>
 
-                    {/* Right Col: Results - Takes 8 cols on XL, full width on mobile */}
-                    <div className="xl:col-span-8 bg-white rounded-[2rem] border border-slate-200 p-8 flex flex-col min-h-[500px] shadow-sm overflow-hidden relative">
-                        {!result && !analyzing && !mintSuccess && (
-                            <div className="flex-1 flex flex-col justify-center items-center text-center">
-                                <div className="w-32 h-32 bg-slate-50 rounded-full flex items-center justify-center mb-8 border border-slate-100">
+                    {/* Right Col: Results */}
+                    <div className="xl:col-span-8">
+                        <motion.div
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className="bg-white/80 backdrop-blur-xl rounded-3xl border border-slate-200/50 p-6 sm:p-8 flex flex-col min-h-[600px] shadow-2xl shadow-slate-900/5 relative overflow-hidden"
+                        >
+                            {/* Decorative gradient overlay */}
+                            <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-purple-100/30 to-indigo-100/30 rounded-full blur-3xl -z-0" />
+                            
+                            <div className="relative z-10 flex-1 flex flex-col">
+                                {!result && !analyzing && !mintSuccess && !testReady && (
+                                    <div className="flex-1 flex flex-col justify-center items-center text-center py-12">
+                                        <motion.div
+                                            initial={{ scale: 0.8, opacity: 0 }}
+                                            animate={{ scale: 1, opacity: 1 }}
+                                            transition={{ delay: 0.2 }}
+                                            className="relative mb-8"
+                                        >
+                                            <div className="w-40 h-40 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-3xl flex items-center justify-center border-2 border-purple-200/50 shadow-xl">
+                                                <motion.div
+                                                    animate={{ y: [0, -12, 0] }}
+                                                    transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                                                >
+                                                    <Upload className="w-16 h-16 text-purple-400" />
+                                                </motion.div>
+                                            </div>
+                                            <motion.div
+                                                animate={{ scale: [1, 1.1, 1], opacity: [0.5, 0.8, 0.5] }}
+                                                transition={{ duration: 2, repeat: Infinity }}
+                                                className="absolute inset-0 bg-purple-200 rounded-3xl blur-xl"
+                                            />
+                                        </motion.div>
+                                        <motion.h3
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: 0.3 }}
+                                            className="text-3xl font-black mb-3 bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent"
+                                        >
+                                            Your Evaluation Awaits
+                                        </motion.h3>
+                                        <motion.p
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: 0.4 }}
+                                            className="text-slate-600 max-w-md font-medium leading-relaxed"
+                                        >
+                                            Submit your GitHub repository to begin the interactive test-based evaluation. Prove your skills through MCQs and coding challenges.
+                                        </motion.p>
+                                    </div>
+                                )}
+
+                                {analyzing && (
+                                    <div className="flex-1 flex flex-col justify-center items-center py-12">
+                                        <div className="relative w-32 h-32 mb-8">
+                                            <motion.div
+                                                animate={{ rotate: 360 }}
+                                                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                                                className="absolute inset-0 border-4 border-purple-200 border-t-purple-600 rounded-full"
+                                            />
+                                            <motion.div
+                                                animate={{ rotate: -360 }}
+                                                transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                                                className="absolute inset-4 border-4 border-indigo-200 border-t-indigo-600 rounded-full"
+                                            />
+                                            <div className="absolute inset-0 flex items-center justify-center">
+                                                <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-full flex items-center justify-center">
+                                                    <Loader2 className="w-8 h-8 text-purple-600 animate-spin" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <motion.div
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            className="text-center space-y-2"
+                                        >
+                                            <p className="text-2xl font-black text-slate-900">Analyzing Evidence...</p>
+                                            <p className="text-slate-600 font-medium">Preparing your personalized test</p>
+                                        </motion.div>
+                                    </div>
+                                )}
+
+                                {testReady && repoAnalysis && !analyzing && (
                                     <motion.div
-                                        animate={{ y: [0, -12, 0] }}
-                                        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                                        initial={{ scale: 0.95, opacity: 0 }}
+                                        animate={{ scale: 1, opacity: 1 }}
+                                        className="flex-1 flex flex-col overflow-y-auto -m-6 sm:-m-8 p-6 sm:p-8"
                                     >
-                                        <Upload className="w-12 h-12 text-slate-300" />
+                                        <TestFlowContainer
+                                            repoAnalysis={repoAnalysis}
+                                            skill={selectedSkill}
+                                            onComplete={handleTestComplete}
+                                        />
                                     </motion.div>
-                                </div>
-                                <h3 className="text-2xl font-bold text-slate-900 mb-3">Your Evaluation Awaits</h3>
-                                <p className="text-slate-500 max-w-sm font-medium">Submit evidence to see your AI-analyzed skill score against our public rubric.</p>
-                            </div>
-                        )}
+                                )}
 
-                        {analyzing && (
-                            <div className="flex-1 flex flex-col justify-center items-center">
-                                <div className="relative w-24 h-24 mb-8">
+                                {result && !analyzing && !testReady && (
                                     <motion.div
-                                        animate={{ rotate: 360 }}
-                                        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                                        className="absolute inset-0 border-4 border-purple-500/20 border-t-purple-600 rounded-full"
-                                    />
-                                    <motion.div
-                                        animate={{ rotate: -360 }}
-                                        transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                                        className="absolute inset-4 border-4 border-indigo-500/20 border-t-indigo-600 rounded-full"
-                                    />
-                                </div>
-                                <div className="text-center">
-                                    <p className="text-xl font-bold text-slate-900 mb-2">Analyzing Evidence...</p>
-                                    <p className="text-slate-500 font-medium">Checking code quality, depth, and best practices</p>
-                                </div>
-                            </div>
-                        )}
-
-                        {testReady && repoAnalysis && !analyzing && (
-                            <motion.div
-                                initial={{ scale: 0.95, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                className="flex-1 flex flex-col overflow-y-auto"
-                            >
-                                <TestFlowContainer
-                                    repoAnalysis={repoAnalysis}
-                                    skill={selectedSkill}
-                                    onComplete={handleTestComplete}
-                                />
-                            </motion.div>
-                        )}
-
-                        {result && !analyzing && !testReady && (
-                            <motion.div
-                                initial={{ scale: 0.95, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                className="flex-1 flex flex-col"
-                            >
-                                {result.failed || result.score === 0 ? (
+                                        initial={{ scale: 0.95, opacity: 0 }}
+                                        animate={{ scale: 1, opacity: 1 }}
+                                        className="flex-1 flex flex-col -m-6 sm:-m-8 p-6 sm:p-8"
+                                    >
+                                        {result.failed || result.score === 0 ? (
                                     // FAILED EVALUATION
                                     <div className="flex-1 flex flex-col items-center justify-center text-center py-20">
                                         <div className="w-24 h-24 bg-red-50 rounded-full flex items-center justify-center border-2 border-red-100 mb-8">
@@ -542,19 +650,21 @@ export default function StudentDashboard() {
                                                 ))}
                                             </ul>
                                         </div>
-                                        <p className="text-slate-400 text-xs mt-10 font-bold uppercase tracking-widest leading-relaxed">Please submit evidence that actually contains <span className="text-purple-600">{selectedSkill}</span> code for a valid assessment.</p>
-                                    </div>
-                                ) : (
-                                    // SUCCESSFUL EVALUATION - Show mint button only after tests pass
-                                    <EvaluationResults
-                                        result={result}
-                                        selectedSkill={selectedSkill}
-                                        onMint={handleMint}
-                                        minting={minting}
-                                    />
+                                            <p className="text-slate-400 text-xs mt-10 font-bold uppercase tracking-widest leading-relaxed">Please submit evidence that actually contains <span className="text-purple-600">{selectedSkill}</span> code for a valid assessment.</p>
+                                        </div>
+                                    ) : (
+                                        // SUCCESSFUL EVALUATION - Show mint button only after tests pass
+                                        <EvaluationResults
+                                            result={result}
+                                            selectedSkill={selectedSkill}
+                                            onMint={handleMint}
+                                            minting={minting}
+                                        />
+                                    )}
+                                    </motion.div>
                                 )}
-                            </motion.div>
-                        )}
+                            </div>
+                        </motion.div>
                     </div>
                 </div>
             </div>
