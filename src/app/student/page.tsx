@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle, Upload, Loader2, Github, FileText, Video, Link as LinkIcon, ExternalLink, AlertCircle, X, FileCode, TrendingUp, Award, BarChart3, Wallet, Lock, LogOut } from "lucide-react";
+import { CheckCircle, Upload, Loader2, Github, FileText, Video, Link as LinkIcon, ExternalLink, AlertCircle, X, FileCode, TrendingUp, Award, BarChart3, Wallet, Lock, LogOut, ArrowRight } from "lucide-react";
 import { useSession, signIn, signOut } from "next-auth/react";
 import { connectWallet } from "@/lib/stellar";
 import Certificate from "@/components/Certificate";
@@ -180,7 +180,7 @@ export default function StudentDashboard() {
         setFinalTestScore(score);
         // Calculate level from score
         const level = score >= 90 ? "Expert" : score >= 80 ? "Advanced" : score >= 70 ? "Intermediate" : "Beginner";
-        
+
         // Set result for minting
         setResult({
             score,
@@ -276,71 +276,70 @@ export default function StudentDashboard() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50/30 to-indigo-50/50 text-slate-900 relative overflow-hidden">
-            {/* Animated background gradient */}
+        <div className="min-h-screen bg-zinc-50 text-zinc-950 relative overflow-hidden">
+            {/* Minimalist background grid */}
+            <div className="fixed inset-0 -z-10 bg-[radial-gradient(45%_45%_at_50%_50%,#fafafa_0%,#f4f4f5_100%)]" />
             <div className="fixed inset-0 -z-10">
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-purple-200/20 via-transparent to-transparent" />
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-indigo-200/20 via-transparent to-transparent" />
-                <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]" />
+                <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:32px_32px]" />
             </div>
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-                {/* Header */}
+                {/* Technical Header */}
                 <ScrollReveal direction="down" threshold={0.1}>
-                    <header className="relative mb-10 sm:mb-12">
-                        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-8">
-                            <div className="space-y-3">
-                                <motion.h1 
-                                    initial={{ opacity: 0, y: -20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    className="text-4xl sm:text-5xl lg:text-6xl font-black bg-gradient-to-r from-slate-900 via-purple-900 to-indigo-900 bg-clip-text text-transparent tracking-tight"
+                    <header className="relative mb-16 pt-32">
+                        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-8">
+                            <div className="space-y-4">
+                                <motion.div
+                                    initial={{ opacity: 0, x: -10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    className="inline-flex items-center gap-2 px-2.5 py-1 bg-white border border-zinc-200 rounded-full shadow-sm"
                                 >
-                                    Prove Your Skill
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Pipeline Active</span>
+                                </motion.div>
+                                <motion.h1
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="text-5xl md:text-7xl font-black tracking-tight text-zinc-950 leading-[0.9]"
+                                >
+                                    Proof Workflow<span className="text-zinc-400">.</span>
                                 </motion.h1>
-                                <div className="flex items-center gap-3 flex-wrap">
-                                    <div className="flex items-center gap-2 px-3 py-1.5 bg-white/80 backdrop-blur-sm rounded-full border border-slate-200/50 shadow-sm">
-                                        <div className="w-2 h-2 rounded-full bg-gradient-to-r from-purple-500 to-indigo-500 animate-pulse" />
-                                        <span className="text-sm font-semibold text-slate-700">
-                                            Welcome, <span className="text-slate-900">{session.user?.name}</span>
+                                <p className="text-zinc-500 font-medium max-w-lg text-sm md:text-base leading-relaxed">
+                                    Submit your evidence for computational validation.
+                                    Verification logs are recorded on the primary ledger.
+                                </p>
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+                                {!wallet ? (
+                                    <motion.button
+                                        whileHover={{ scale: 1.02 }}
+                                        whileTap={{ scale: 0.98 }}
+                                        onClick={handleConnect}
+                                        className="px-8 py-4 bg-zinc-950 text-white rounded-2xl font-black text-xs tracking-widest transition-all shadow-2xl flex items-center justify-center gap-3 active:scale-95 border border-zinc-800"
+                                    >
+                                        <Wallet className="w-4 h-4" />
+                                        INITIALIZE WALLET
+                                    </motion.button>
+                                ) : (
+                                    <div className="flex items-center gap-4 px-6 py-4 bg-white border border-zinc-200 rounded-2xl shadow-sm">
+                                        <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                                        <span className="font-mono text-xs font-bold text-zinc-900 tracking-wider uppercase">
+                                            {wallet.slice(0, 6)}...{wallet.slice(-4)}
                                         </span>
                                     </div>
-                                    <button 
-                                        onClick={() => signOut()} 
-                                        className="text-xs text-red-600 hover:bg-red-50 font-semibold px-3 py-1.5 rounded-full border border-red-200/50 transition-all hover:border-red-300"
-                                    >
-                                        Sign Out
+                                )}
+                                <div className="flex items-center gap-3 pl-4 border-l border-zinc-200 sm:h-12">
+                                    <div className="text-right">
+                                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest leading-none mb-1">Authenticated</p>
+                                        <p className="text-xs font-bold text-zinc-900 leading-none">{session.user?.name}</p>
+                                    </div>
+                                    <button onClick={() => signOut()} className="p-2.5 rounded-xl hover:bg-zinc-100 text-zinc-400 hover:text-red-600 transition-all border border-transparent hover:border-zinc-200">
+                                        <LogOut className="w-4 h-4" />
                                     </button>
                                 </div>
                             </div>
-                            {!wallet ? (
-                                <motion.button
-                                    initial={{ opacity: 0, scale: 0.95 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    whileHover={{ y: -2, scale: 1.02 }}
-                                    whileTap={{ scale: 0.98 }}
-                                    onClick={handleConnect}
-                                    className="group relative px-6 sm:px-8 py-3.5 sm:py-4 bg-gradient-to-r from-purple-600 via-purple-600 to-indigo-600 text-white rounded-2xl font-bold transition-all flex items-center gap-3 shadow-xl shadow-purple-500/30 hover:shadow-2xl hover:shadow-purple-500/40"
-                                >
-                                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-purple-400 to-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity blur-xl" />
-                                    <Wallet className="w-5 h-5 relative z-10" />
-                                    <span className="hidden sm:inline relative z-10">Connect Wallet</span>
-                                    <span className="sm:hidden relative z-10">Connect</span>
-                                </motion.button>
-                            ) : (
-                                <motion.div
-                                    initial={{ scale: 0.9, opacity: 0 }}
-                                    animate={{ scale: 1, opacity: 1 }}
-                                    className="flex items-center gap-3 px-5 py-3 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200/50 rounded-2xl shadow-lg backdrop-blur-sm"
-                                >
-                                    <div className="relative">
-                                        <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
-                                        <div className="absolute inset-0 w-3 h-3 rounded-full bg-emerald-400 animate-ping" />
-                                    </div>
-                                    <span className="font-mono text-sm font-bold text-emerald-900">{wallet.slice(0, 8)}...{wallet.slice(-6)}</span>
-                                </motion.div>
-                            )}
                         </div>
-                        <div className="h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
                     </header>
                 </ScrollReveal>
 
@@ -435,94 +434,77 @@ export default function StudentDashboard() {
                         <motion.div
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
-                            className="bg-white/80 backdrop-blur-xl rounded-3xl border border-slate-200/50 p-6 sm:p-8 shadow-2xl shadow-slate-900/5"
+                            className="bg-white rounded-3xl border border-zinc-200 p-8 shadow-sm"
                         >
-                            <div className="flex items-center gap-3 mb-8">
-                                <div className="p-2 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-xl">
-                                    <Award className="w-5 h-5 text-purple-600" />
+                            <div className="flex items-center gap-3 mb-10">
+                                <div className="p-2.5 bg-zinc-950 rounded-xl">
+                                    <Award className="w-5 h-5 text-white" />
                                 </div>
-                                <h2 className="text-2xl font-black text-slate-900">Prove a Skill</h2>
+                                <h2 className="text-2xl font-black text-zinc-950 tracking-tight">Proof Request</h2>
                             </div>
 
-                            <div className="space-y-6">
+                            <div className="space-y-8">
                                 <div>
-                                    <label className="block text-slate-700 text-sm font-bold mb-3">Select Skill</label>
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-2 gap-2.5">
+                                    <label className="block text-zinc-400 text-[10px] font-black uppercase tracking-[0.2em] mb-4">Mastery Target</label>
+                                    <div className="grid grid-cols-2 gap-2.5">
                                         {SKILLS.map(skill => (
                                             <motion.button
                                                 key={skill.name}
-                                                whileHover={{ y: -2, scale: 1.02 }}
+                                                whileHover={{ y: -1 }}
                                                 whileTap={{ scale: 0.98 }}
                                                 onClick={() => {
                                                     setSelectedSkill(skill.name);
                                                     setResult(null);
                                                 }}
-                                                className={`px-4 py-3 rounded-xl border-2 font-bold transition-all text-sm relative overflow-hidden ${
-                                                    selectedSkill === skill.name
-                                                        ? "border-purple-500 bg-gradient-to-br from-purple-50 to-indigo-50 text-purple-700 shadow-lg shadow-purple-500/20"
-                                                        : "border-slate-200 bg-slate-50/50 hover:border-slate-300 hover:bg-slate-100 text-slate-600"
-                                                }`}
+                                                className={`px-4 py-3 rounded-xl border font-bold transition-all text-sm ${selectedSkill === skill.name
+                                                    ? "border-zinc-950 bg-zinc-950 text-white shadow-xl"
+                                                    : "border-zinc-200 bg-white hover:border-zinc-300 text-zinc-500"
+                                                    }`}
                                             >
-                                                {selectedSkill === skill.name && (
-                                                    <motion.div
-                                                        layoutId="selectedSkill"
-                                                        className="absolute inset-0 bg-gradient-to-br from-purple-100/50 to-indigo-100/50"
-                                                        transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                                                    />
-                                                )}
-                                                <span className="relative z-10">{skill.name}</span>
+                                                {skill.name}
                                             </motion.button>
                                         ))}
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className="block text-slate-700 text-sm font-bold mb-3">Evidence Link</label>
+                                    <label className="block text-zinc-400 text-[10px] font-black uppercase tracking-[0.2em] mb-4">Evidence Source</label>
                                     <div className="relative group">
-                                        <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 group-focus-within:text-purple-600 transition-colors z-10" />
+                                        <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 w-4 h-4 group-focus-within:text-zinc-950 transition-colors z-10" />
                                         <input
                                             type="text"
-                                            placeholder="https://github.com/username/repo"
+                                            placeholder="GitHub URL (e.g. /username/repo)"
                                             value={evidenceLink}
                                             onChange={(e) => {
                                                 setEvidenceLink(e.target.value);
                                                 setResult(null);
                                             }}
                                             onKeyDown={(e) => e.key === 'Enter' && !isButtonDisabled && handleSubmit()}
-                                            className="w-full bg-gradient-to-br from-slate-50 to-white border-2 border-slate-200 rounded-xl py-3.5 pl-12 pr-4 text-slate-900 text-sm font-medium focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 transition-all shadow-sm"
+                                            className="w-full bg-zinc-50 border border-zinc-200 rounded-xl py-4 pl-12 pr-4 text-zinc-950 text-sm font-medium focus:outline-none focus:border-zinc-950 focus:bg-white transition-all"
                                         />
                                     </div>
-                                    <p className="text-xs text-slate-500 mt-2.5 font-medium flex items-center gap-2">
-                                        <Github className="w-3.5 h-3.5" />
-                                        GitHub repositories supported
-                                    </p>
                                 </div>
 
                                 <motion.button
-                                    whileHover={!isButtonDisabled ? { y: -2, scale: 1.02 } : {}}
+                                    whileHover={!isButtonDisabled ? { y: -1 } : {}}
                                     whileTap={!isButtonDisabled ? { scale: 0.98 } : {}}
                                     onClick={handleSubmit}
                                     disabled={isButtonDisabled}
-                                    className={`w-full py-4 rounded-xl font-black text-base flex items-center justify-center gap-3 transition-all relative overflow-hidden ${
-                                        isButtonDisabled
-                                            ? "bg-slate-100 text-slate-400 cursor-not-allowed"
-                                            : "bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white hover:shadow-2xl hover:shadow-slate-900/30"
-                                    }`}
+                                    className={`w-full py-4 rounded-xl font-black text-xs tracking-[0.2em] flex items-center justify-center gap-3 transition-all ${isButtonDisabled
+                                        ? "bg-zinc-100 text-zinc-400 cursor-not-allowed border border-zinc-200"
+                                        : "bg-zinc-950 text-white hover:bg-zinc-800 shadow-2xl"
+                                        }`}
                                 >
-                                    {!isButtonDisabled && (
-                                        <motion.div
-                                            className="absolute inset-0 bg-gradient-to-r from-purple-600/20 to-indigo-600/20"
-                                            animate={{ x: ['-100%', '100%'] }}
-                                            transition={{ repeat: Infinity, duration: 3, ease: "linear" }}
-                                        />
-                                    )}
                                     {analyzing ? (
                                         <>
-                                            <Loader2 className="w-5 h-5 animate-spin relative z-10" />
-                                            <span className="relative z-10">Analyzing Evidence...</span>
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                            RUNNING ANALYSIS...
                                         </>
                                     ) : (
-                                        <span className="relative z-10">{getButtonText()}</span>
+                                        <>
+                                            {isWalletConnected ? "START EVALUATION" : "CONNECT WALLET"}
+                                            {!analyzing && isLinkEntered && <ArrowRight className="w-4 h-4 ml-1" />}
+                                        </>
                                     )}
                                 </motion.button>
                             </div>
@@ -534,11 +516,11 @@ export default function StudentDashboard() {
                         <motion.div
                             initial={{ opacity: 0, x: 20 }}
                             animate={{ opacity: 1, x: 0 }}
-                            className="bg-white/80 backdrop-blur-xl rounded-3xl border border-slate-200/50 p-6 sm:p-8 flex flex-col min-h-[600px] shadow-2xl shadow-slate-900/5 relative overflow-hidden"
+                            className="bg-white rounded-3xl border border-zinc-200 p-8 flex flex-col min-h-[640px] shadow-sm relative overflow-hidden"
                         >
                             {/* Decorative gradient overlay */}
                             <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-purple-100/30 to-indigo-100/30 rounded-full blur-3xl -z-0" />
-                            
+
                             <div className="relative z-10 flex-1 flex flex-col">
                                 {!result && !analyzing && !mintSuccess && !testReady && (
                                     <div className="flex-1 flex flex-col justify-center items-center text-center py-12">
@@ -632,35 +614,35 @@ export default function StudentDashboard() {
                                         className="flex-1 flex flex-col -m-6 sm:-m-8 p-6 sm:p-8"
                                     >
                                         {result.failed || result.score === 0 ? (
-                                    // FAILED EVALUATION
-                                    <div className="flex-1 flex flex-col items-center justify-center text-center py-20">
-                                        <div className="w-24 h-24 bg-red-50 rounded-full flex items-center justify-center border-2 border-red-100 mb-8">
-                                            <X className="w-12 h-12 text-red-500" />
-                                        </div>
-                                        <h3 className="text-4xl font-black text-slate-900 mb-2">Evaluation Failed</h3>
-                                        <p className="text-slate-500 font-bold mb-10">Score: {result.score}/100</p>
-                                        <div className="bg-red-50/50 border border-red-100 rounded-[1.5rem] p-8 w-full text-left">
-                                            <p className="text-sm text-red-900 mb-4 font-black uppercase tracking-wider">Failure Analysis:</p>
-                                            <ul className="space-y-4">
-                                                {result.feedback.map((f: string, i: number) => (
-                                                    <li key={i} className="flex items-start gap-4 text-sm font-medium text-red-700">
-                                                        <div className="w-2 h-2 rounded-full bg-red-400 mt-1.5 flex-shrink-0" />
-                                                        <span>{f}</span>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </div>
-                                            <p className="text-slate-400 text-xs mt-10 font-bold uppercase tracking-widest leading-relaxed">Please submit evidence that actually contains <span className="text-purple-600">{selectedSkill}</span> code for a valid assessment.</p>
-                                        </div>
-                                    ) : (
-                                        // SUCCESSFUL EVALUATION - Show mint button only after tests pass
-                                        <EvaluationResults
-                                            result={result}
-                                            selectedSkill={selectedSkill}
-                                            onMint={handleMint}
-                                            minting={minting}
-                                        />
-                                    )}
+                                            // FAILED EVALUATION
+                                            <div className="flex-1 flex flex-col items-center justify-center text-center py-20">
+                                                <div className="w-24 h-24 bg-red-50 rounded-full flex items-center justify-center border-2 border-red-100 mb-8">
+                                                    <X className="w-12 h-12 text-red-500" />
+                                                </div>
+                                                <h3 className="text-4xl font-black text-slate-900 mb-2">Evaluation Failed</h3>
+                                                <p className="text-slate-500 font-bold mb-10">Score: {result.score}/100</p>
+                                                <div className="bg-red-50/50 border border-red-100 rounded-[1.5rem] p-8 w-full text-left">
+                                                    <p className="text-sm text-red-900 mb-4 font-black uppercase tracking-wider">Failure Analysis:</p>
+                                                    <ul className="space-y-4">
+                                                        {result.feedback.map((f: string, i: number) => (
+                                                            <li key={i} className="flex items-start gap-4 text-sm font-medium text-red-700">
+                                                                <div className="w-2 h-2 rounded-full bg-red-400 mt-1.5 flex-shrink-0" />
+                                                                <span>{f}</span>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                                <p className="text-slate-400 text-xs mt-10 font-bold uppercase tracking-widest leading-relaxed">Please submit evidence that actually contains <span className="text-purple-600">{selectedSkill}</span> code for a valid assessment.</p>
+                                            </div>
+                                        ) : (
+                                            // SUCCESSFUL EVALUATION - Show mint button only after tests pass
+                                            <EvaluationResults
+                                                result={result}
+                                                selectedSkill={selectedSkill}
+                                                onMint={handleMint}
+                                                minting={minting}
+                                            />
+                                        )}
                                     </motion.div>
                                 )}
                             </div>
@@ -775,57 +757,40 @@ function EvaluationResults({
         <div className="flex-1 flex flex-col gap-6 overflow-y-auto custom-scrollbar">
             {/* Score Header - Compact Horizontal Layout */}
             <motion.div
-                initial={{ scale: 0.98, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.4 }}
-                className="relative bg-white rounded-[2rem] p-8 border border-slate-100 shadow-xl shadow-purple-50 overflow-hidden"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="relative bg-white rounded-[2rem] p-10 border border-zinc-200 shadow-sm overflow-hidden"
             >
-                <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-purple-500 to-indigo-500" />
-                <div className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-                    <div className="flex items-center gap-6 flex-1">
-                        <motion.div
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            transition={{ delay: 0.2, type: "spring" }}
-                            className="w-20 h-20 bg-emerald-50 rounded-3xl flex items-center justify-center border-2 border-emerald-100 shadow-sm flex-shrink-0"
-                        >
-                            <CheckCircle className="w-10 h-10 text-emerald-500" />
-                        </motion.div>
+                <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
+                    <div className="flex items-center gap-8">
+                        <div className="w-24 h-24 bg-zinc-50 rounded-[2rem] flex items-center justify-center border border-zinc-100 shadow-inner">
+                            <CheckCircle className="w-10 h-10 text-zinc-950" />
+                        </div>
                         <div>
-                            <motion.div
-                                initial={{ opacity: 0, y: -10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.3 }}
-                                className="flex items-baseline gap-2 mb-2"
-                            >
-                                <h3 className={`text-6xl font-black ${getScoreColor(score)}`}>
+                            <div className="flex items-baseline gap-2 mb-2">
+                                <h3 className="text-7xl font-black text-zinc-950 tracking-tighter">
                                     {scoreDisplay}
                                 </h3>
-                                <span className="text-3xl text-slate-300">/100</span>
-                            </motion.div>
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ delay: 0.4 }}
-                                className={`inline-block bg-gradient-to-r ${getLevelBadgeColor(result.level)} px-4 py-1.5 rounded-xl text-white font-bold text-sm shadow-lg`}
-                            >
-                                <Award className="w-4 h-4 inline mr-2" />
+                                <span className="text-2xl font-bold text-zinc-300">/ 100</span>
+                            </div>
+                            <div className={`inline-flex items-center gap-2 bg-zinc-950 px-4 py-1.5 rounded-full text-white text-[10px] font-black uppercase tracking-[0.2em] shadow-2xl`}>
+                                <Award className="w-3 h-3" />
                                 {result.level}
-                            </motion.div>
+                            </div>
                         </div>
                     </div>
-                    {/* Progress Bar */}
-                    <div className="w-full sm:w-64">
-                        <div className="flex justify-between text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">
-                            <span>Score Progress</span>
+
+                    <div className="w-full md:w-64 space-y-3">
+                        <div className="flex justify-between text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">
+                            <span>Validation Delta</span>
                             <span>{score}%</span>
                         </div>
-                        <div className="relative w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+                        <div className="h-2 w-full bg-zinc-100 rounded-full overflow-hidden border border-zinc-200/50">
                             <motion.div
                                 initial={{ width: 0 }}
                                 animate={{ width: `${score}%` }}
-                                transition={{ duration: 1.5, delay: 0.3, ease: "easeOut" }}
-                                className={`h-full bg-gradient-to-r ${getLevelBadgeColor(result.level)} rounded-full shadow-lg`}
+                                transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
+                                className="h-full bg-zinc-950 rounded-full"
                             />
                         </div>
                     </div>
@@ -1033,29 +998,29 @@ function EvaluationResults({
 
             {/* Mint Button - Full Width */}
             <motion.button
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.7 }}
                 onClick={onMint}
                 disabled={minting || result.score < 70}
-                whileHover={!minting && result.score >= 70 ? { y: -2 } : {}}
+                whileHover={!minting && result.score >= 70 ? { y: -1 } : {}}
                 whileTap={!minting && result.score >= 70 ? { scale: 0.98 } : {}}
-                className={`w-full py-5 rounded-[1.5rem] font-black text-lg text-white shadow-xl transition-all flex items-center justify-center gap-3 ${result.score < 70
-                    ? "bg-slate-200 text-slate-400 cursor-not-allowed border-2 border-slate-100"
-                    : "bg-slate-900 hover:bg-slate-800 shadow-slate-200"
+                className={`w-full py-5 rounded-2xl font-black text-xs tracking-[0.3em] text-white shadow-2xl transition-all flex items-center justify-center gap-3 ${result.score < 70
+                        ? "bg-zinc-100 text-zinc-400 cursor-not-allowed border border-zinc-200"
+                        : "bg-zinc-950 hover:bg-zinc-800"
                     }`}
             >
                 {minting ? (
                     <>
-                        <Loader2 className="w-6 h-6 animate-spin" />
-                        <span>Minting Credential Ledger...</span>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        MINTING ATTESTATION...
                     </>
                 ) : result.score < 70 ? (
-                    `Score too low to mint (need ≥70)`
+                    `INSUFFICIENT DELTA (MIN 70%)`
                 ) : (
                     <>
-                        <Award className="w-6 h-6" />
-                        <span>MINT SOULBOUND CREDENTIAL</span>
+                        <Award className="w-4 h-4" />
+                        ATTEST PROOF TO LEDGER
                     </>
                 )}
             </motion.button>

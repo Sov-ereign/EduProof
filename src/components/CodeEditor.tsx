@@ -98,24 +98,32 @@ export default function CodeEditor({ challenge, language, onComplete, onNext }: 
     return (
         <div className="w-full space-y-4">
             {/* Challenge Header */}
-            <div className="bg-gray-900/50 rounded-xl p-6 border border-gray-800">
-                <h3 className="text-2xl font-bold text-white mb-2">{challenge.title}</h3>
-                <p className="text-gray-300 whitespace-pre-wrap">{challenge.description}</p>
-                <div className="mt-4 p-3 bg-gray-800/50 rounded-lg">
-                    <p className="text-sm text-gray-400 mb-1">Function Signature:</p>
-                    <code className="text-purple-400 font-mono">{challenge.functionSignature}</code>
+            <div className="bg-slate-900/90 backdrop-blur-md rounded-2xl p-6 border border-slate-800 shadow-xl overflow-hidden relative">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl -z-0" />
+                <div className="relative z-10">
+                    <h3 className="text-xl font-black text-white mb-2 tracking-tight">{challenge.title}</h3>
+                    <p className="text-slate-300 text-sm leading-relaxed font-medium">{challenge.description}</p>
+                    <div className="mt-4 p-4 bg-slate-800/50 rounded-xl border border-slate-700/50">
+                        <p className="text-[10px] font-black text-slate-500 mb-2 uppercase tracking-widest">Target Function</p>
+                        <code className="text-purple-400 font-mono text-sm">{challenge.functionSignature}</code>
+                    </div>
                 </div>
             </div>
 
             {/* Code Editor */}
-            <div className="bg-gray-900/50 rounded-xl border border-gray-800 overflow-hidden">
-                <div className="bg-gray-800 px-4 py-2 flex items-center justify-between">
-                    <span className="text-sm text-gray-400 font-mono">{language}</span>
+            <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-2xl">
+                <div className="bg-slate-800/50 px-5 py-3 flex items-center justify-between border-b border-slate-700/50">
+                    <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-red-500/50" />
+                        <div className="w-3 h-3 rounded-full bg-amber-500/50" />
+                        <div className="w-3 h-3 rounded-full bg-emerald-500/50" />
+                        <span className="ml-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">{language} Environment</span>
+                    </div>
                     <button
                         onClick={() => setCode(challenge.starterCode || challenge.functionSignature + "\n    pass")}
-                        className="text-xs text-gray-400 hover:text-gray-300 transition"
+                        className="text-[10px] font-black text-slate-500 hover:text-white transition-colors uppercase tracking-widest"
                     >
-                        Reset
+                        Reset Source
                     </button>
                 </div>
                 <div className="relative">
@@ -139,9 +147,9 @@ export default function CodeEditor({ challenge, language, onComplete, onNext }: 
             </div>
 
             {/* Test Cases */}
-            <div className="bg-gray-900/50 rounded-xl p-6 border border-gray-800">
-                <h4 className="text-lg font-semibold text-white mb-4">Test Cases</h4>
-                <div className="space-y-3">
+            <div className="bg-slate-900/90 backdrop-blur-md rounded-2xl p-6 border border-slate-800 shadow-xl">
+                <h4 className="text-sm font-black text-white mb-6 uppercase tracking-widest border-l-4 border-purple-500 pl-4">Test Protocols</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {challenge.testCases.map((testCase, index) => {
                         const result = validationResult?.results?.find((r: any) => r.testCase === index + 1);
                         const passed = result?.passed;
@@ -149,60 +157,43 @@ export default function CodeEditor({ challenge, language, onComplete, onNext }: 
                         return (
                             <div
                                 key={index}
-                                className={`p-4 rounded-lg border ${
-                                    submitted
+                                className={`p-4 rounded-xl border-2 transition-all duration-500 ${submitted
                                         ? passed
-                                            ? "bg-green-500/10 border-green-500/30"
-                                            : "bg-red-500/10 border-red-500/30"
-                                        : "bg-gray-800/50 border-gray-700"
-                                }`}
+                                            ? "bg-emerald-500/5 border-emerald-500/30"
+                                            : "bg-rose-500/5 border-rose-500/30"
+                                        : "bg-slate-800/30 border-slate-800 hover:border-slate-700"
+                                    }`}
                             >
-                                <div className="flex items-start gap-3">
-                                    {submitted ? (
-                                        passed ? (
-                                            <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+                                <div className="flex items-start gap-4">
+                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${submitted
+                                            ? passed ? "bg-emerald-500/20" : "bg-rose-500/20"
+                                            : "bg-slate-800"
+                                        }`}>
+                                        {submitted ? (
+                                            passed ? (
+                                                <CheckCircle className="w-4 h-4 text-emerald-400" />
+                                            ) : (
+                                                <XCircle className="w-4 h-4 text-rose-400" />
+                                            )
                                         ) : (
-                                            <XCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                                        )
-                                    ) : (
-                                        <div className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                                    )}
-                                    <div className="flex-1">
-                                        <p className="text-sm text-gray-400 mb-2">
-                                            Test Case {index + 1}
-                                            {testCase.description && `: ${testCase.description}`}
-                                        </p>
-                                        <div className="space-y-1">
-                                            <div>
-                                                <span className="text-xs text-gray-500">Input: </span>
-                                                <code className="text-gray-300 text-sm">
-                                                    {JSON.stringify(testCase.input)}
-                                                </code>
+                                            <span className="text-[10px] font-black text-slate-500">{index + 1}</span>
+                                        )}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-[10px] font-black text-slate-500 mb-2 uppercase tracking-widest truncate">Case {index + 1}: {testCase.description || 'Standard'}</p>
+                                        <div className="space-y-1.5 font-mono text-[11px]">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-slate-600">IN:</span>
+                                                <span className="text-slate-300 truncate">{JSON.stringify(testCase.input)}</span>
                                             </div>
-                                            <div>
-                                                <span className="text-xs text-gray-500">Expected: </span>
-                                                <code className="text-gray-300 text-sm">
-                                                    {JSON.stringify(testCase.expectedOutput)}
-                                                </code>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-slate-600">REQ:</span>
+                                                <span className="text-emerald-400/80 truncate">{JSON.stringify(testCase.expectedOutput)}</span>
                                             </div>
-                                            {submitted && result && (
-                                                <div>
-                                                    {result.got !== undefined && (
-                                                        <div>
-                                                            <span className="text-xs text-gray-500">Got: </span>
-                                                            <code className={`text-sm ${
-                                                                passed ? "text-green-300" : "text-red-300"
-                                                            }`}>
-                                                                {JSON.stringify(result.got)}
-                                                            </code>
-                                                        </div>
-                                                    )}
-                                                    {result.error && (
-                                                        <div className="mt-1">
-                                                            <span className="text-xs text-red-400">Error: </span>
-                                                            <span className="text-sm text-red-300">{result.error}</span>
-                                                        </div>
-                                                    )}
+                                            {submitted && result && result.got !== undefined && (
+                                                <div className="flex items-center gap-2 pt-1 border-t border-slate-800 mt-1">
+                                                    <span className="text-slate-600">GOT:</span>
+                                                    <span className={passed ? "text-emerald-400" : "text-rose-400"}>{JSON.stringify(result.got)}</span>
                                                 </div>
                                             )}
                                         </div>
@@ -218,9 +209,8 @@ export default function CodeEditor({ challenge, language, onComplete, onNext }: 
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     {submitted && validationResult && (
-                        <div className={`flex items-center gap-2 ${
-                            validationResult.passed ? "text-green-400" : "text-red-400"
-                        }`}>
+                        <div className={`flex items-center gap-2 ${validationResult.passed ? "text-green-400" : "text-red-400"
+                            }`}>
                             {validationResult.passed ? (
                                 <>
                                     <CheckCircle className="w-5 h-5" />
@@ -242,13 +232,12 @@ export default function CodeEditor({ challenge, language, onComplete, onNext }: 
                 <button
                     onClick={handleRun}
                     disabled={validating || (submitted && canProceed)}
-                    className={`px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition ${
-                        validating
+                    className={`px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition ${validating
                             ? "bg-gray-700 text-gray-400 cursor-not-allowed"
                             : submitted && canProceed
-                            ? "bg-green-600 text-white cursor-not-allowed"
-                            : "bg-gradient-to-r from-purple-600 to-indigo-600 hover:opacity-90 text-white"
-                    }`}
+                                ? "bg-green-600 text-white cursor-not-allowed"
+                                : "bg-gradient-to-r from-purple-600 to-indigo-600 hover:opacity-90 text-white"
+                        }`}
                 >
                     {validating ? (
                         <>
