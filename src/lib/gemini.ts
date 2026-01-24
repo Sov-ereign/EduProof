@@ -1,56 +1,88 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-// Initialize Gemini API client
-function getGeminiClient() {
-    const apiKey = process.env.GEMINI_API_KEY;
+// OpenRouter API client
+function getOpenRouterApiKey() {
+    const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) {
-        throw new Error('GEMINI_API_KEY is not set in environment variables. Please add it to .env.local');
+        throw new Error('OPENROUTER_API_KEY is not set in environment variables. Please add it to .env.local');
     }
-    return new GoogleGenerativeAI(apiKey);
+    return apiKey;
 }
 
-// Cache for available model to avoid testing every time
-let cachedModel: any = null;
+// Cache for available model
 let cachedModelName: string | null = null;
 
-// Get available model by trying common model names
-async function getAvailableModel(client: GoogleGenerativeAI): Promise<any> {
+// Get available model by trying common free models on OpenRouter
+async function getAvailableModel(): Promise<string> {
     // Return cached model if available
-    if (cachedModel && cachedModelName) {
-        return cachedModel;
+    if (cachedModelName) {
+        return cachedModelName;
     }
     
-    // List of models to try in order of preference (gemini-pro is most common)
+    const apiKey = getOpenRouterApiKey();
+    
+    // List of free models to try in order of preference
     const modelsToTry = [
-        'gemini-3-pro-preview',
-        'gemini-2.5-flash',
-        'gemini-2.5-pro',
+        'tngtech/deepseek-r1t2-chimera:free',      // Primary model (free tier)
+        'mistralai/mistral-7b-instruct:free',      // Fallback (free tier)
     ];
     
     for (const modelName of modelsToTry) {
         try {
-            const model = client.getGenerativeModel({ model: modelName });
-            // Test with a tiny prompt to see if model works (minimal API usage)
-            const testResult = await model.generateContent('Hi');
-            await testResult.response;
-            console.log(`✅ Found working model: ${modelName}`);
-            cachedModel = model;
-            cachedModelName = modelName;
-            return model;
+            // Test with a tiny prompt
+            const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    model: modelName,
+                    messages: [{ role: 'user', content: 'Hi' }],
+                    max_tokens: 10,
+                }),
+            });
+            
+            if (response.ok) {
+                console.log(`✅ Found working model: ${modelName}`);
+                cachedModelName = modelName;
+                return modelName;
+            }
         } catch (e: any) {
-            // Try next model
             console.log(`⚠️ Model ${modelName} not available, trying next...`);
             continue;
         }
     }
     
-    // If all fail, throw helpful error
     throw new Error(
-        'No available Gemini models found with your API key. ' +
-        'Tried: gemini-pro, gemini-1.5-flash, gemini-1.5-pro. ' +
-        'Please check: https://ai.google.dev/models/gemini for available models. ' +
-        'Your API key might need to be regenerated or you may need to enable the API in Google Cloud Console.'
+        'No available models found with your OpenRouter API key. ' +
+        'Please check: https://openrouter.ai/models for available models.'
     );
+}
+
+// Call OpenRouter API
+async function callOpenRouter(model: string, messages: Array<{ role: string; content: string }>, maxTokens: number = 2000) {
+    const apiKey = getOpenRouterApiKey();
+    
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            model,
+            messages,
+            max_tokens: maxTokens,
+            temperature: 0.7,
+        }),
+    });
+    
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(`OpenRouter API error: ${error.error?.message || error.error || 'Failed to generate response'}`);
+    }
+    
+    const data = await response.json();
+    return data.choices[0]?.message?.content || '';
 }
 
 export interface MCQQuestion {
@@ -95,9 +127,8 @@ export async function generateMCQs(
     skill: string,
     count: number = 10
 ): Promise<MCQQuestion[]> {
-    const client = getGeminiClient();
-    // Get an available model by trying common names
-    const model = await getAvailableModel(client);
+    // Get an available model
+    const model = await getAvailableModel();
 
     // Prepare repository context for prompt
     const fileSummaries = repoAnalysis.files.slice(0, 5).map(file => {
@@ -143,9 +174,9 @@ Return ONLY a valid JSON array in this exact format (no markdown, no code blocks
 Generate exactly ${count} questions.`;
 
     try {
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const text = response.text();
+        const text = await callOpenRouter(model, [
+            { role: 'user', content: prompt }
+        ], 3000);
 
         // Extract JSON from response (handle markdown code blocks if present)
         let jsonText = text.trim();
@@ -172,18 +203,6 @@ Generate exactly ${count} questions.`;
 
     } catch (error: any) {
         console.error('Error generating MCQs:', error);
-        
-        // Provide helpful error message if model not found
-        if (error.message?.includes('not found') || error.message?.includes('404')) {
-            throw new Error(
-                `Model 'gemini-1.5-pro' not available with your API key. ` +
-                `The error suggests the model name might be different. ` +
-                `Please check: https://ai.google.dev/models/gemini for available models. ` +
-                `Common model names: gemini-1.5-pro, gemini-1.5-flash, gemini-pro. ` +
-                `Original error: ${error.message}`
-            );
-        }
-        
         throw new Error(`Failed to generate MCQs: ${error.message}`);
     }
 }
@@ -196,9 +215,8 @@ export async function generateCodingChallenges(
     skill: string,
     count: number = 3
 ): Promise<CodingChallenge[]> {
-    const client = getGeminiClient();
-    // Get an available model by trying common names
-    const model = await getAvailableModel(client);
+    // Get an available model
+    const model = await getAvailableModel();
 
     // Prepare repository context
     const fileSummaries = repoAnalysis.files.slice(0, 5).map(file => {
@@ -269,9 +287,9 @@ Return ONLY a valid JSON array in this exact format (no markdown, no code blocks
 Generate exactly ${count} challenges.`;
 
     try {
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const text = response.text();
+        const text = await callOpenRouter(model, [
+            { role: 'user', content: prompt }
+        ], 4000);
 
         // Extract JSON from response
         let jsonText = text.trim();
@@ -299,18 +317,6 @@ Generate exactly ${count} challenges.`;
 
     } catch (error: any) {
         console.error('Error generating coding challenges:', error);
-        
-        // Provide helpful error message if model not found
-        if (error.message?.includes('not found') || error.message?.includes('404')) {
-            throw new Error(
-                `Model 'gemini-1.5-pro' not available with your API key. ` +
-                `The error suggests the model name might be different. ` +
-                `Please check: https://ai.google.dev/models/gemini for available models. ` +
-                `Common model names: gemini-1.5-pro, gemini-1.5-flash, gemini-pro. ` +
-                `Original error: ${error.message}`
-            );
-        }
-        
         throw new Error(`Failed to generate coding challenges: ${error.message}`);
     }
 }

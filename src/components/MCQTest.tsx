@@ -16,9 +16,10 @@ interface MCQTestProps {
     questions: MCQQuestion[];
     onComplete: (score: number, passed: boolean) => void;
     onRetry?: () => void;
+    onNext?: () => void;
 }
 
-export default function MCQTest({ questions, onComplete, onRetry }: MCQTestProps) {
+export default function MCQTest({ questions, onComplete, onRetry, onNext }: MCQTestProps) {
     const [answers, setAnswers] = useState<Record<string, number>>({});
     const [submitted, setSubmitted] = useState(false);
     const [score, setScore] = useState<number | null>(null);
@@ -142,9 +143,20 @@ export default function MCQTest({ questions, onComplete, onRetry }: MCQTestProps
 
                     {passed && (
                         <div className="mt-4">
-                            <p className="text-green-300">
+                            <p className="text-green-300 mb-4">
                                 Great job! You can now proceed to the coding challenges.
                             </p>
+                            {onNext && (
+                                <motion.button
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    onClick={onNext}
+                                    className="w-full px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:opacity-90 text-white rounded-xl font-bold transition flex items-center justify-center gap-2"
+                                >
+                                    Continue to Coding Challenges
+                                    <ChevronRight className="w-5 h-5" />
+                                </motion.button>
+                            )}
                         </div>
                     )}
                 </motion.div>
