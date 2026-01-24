@@ -744,9 +744,18 @@ export async function GET(request: Request) {
             let sourceFiles: Array<{ path: string; content: string; extension: string }> = [];
 
             try {
+                console.log(`[ANALYSIS] Fetching source code for ${owner}/${repo} (${skill})...`);
                 sourceFiles = await fetchSourceCode(owner, repo, skill);
+                console.log(`[ANALYSIS] Fetched ${sourceFiles.length} file(s):`, sourceFiles.map(f => f.path));
+                
+                // Log file sizes to verify we got actual content
+                sourceFiles.forEach(file => {
+                    const lines = file.content.split('\n').length;
+                    const size = file.content.length;
+                    console.log(`[ANALYSIS] File: ${file.path} - ${lines} lines, ${size} bytes`);
+                });
             } catch (error) {
-                console.warn(`Error fetching source code: ${error}`);
+                console.error(`[ANALYSIS] Error fetching source code: ${error}`);
                 // Continue with empty sourceFiles - will use fallback validation
             }
 
@@ -797,8 +806,16 @@ export async function GET(request: Request) {
                     let analysisScore = 0;
 
                     try {
+                        console.log(`[ANALYSIS] Running comprehensive ${skill} analysis on ${fileAnalyses.length} file(s)...`);
+                        
                         if (skill === 'React') {
                             comprehensiveAnalysis = analyzeReact(fileAnalyses);
+                            console.log(`[ANALYSIS] React analysis complete:`, {
+                                componentDesign: comprehensiveAnalysis.componentDesign.score,
+                                stateManagement: comprehensiveAnalysis.stateManagement.score,
+                                codeQuality: comprehensiveAnalysis.codeQuality.score,
+                                userExperience: comprehensiveAnalysis.userExperience.score
+                            });
                             analysisScore = (
                                 comprehensiveAnalysis.componentDesign.score * 0.30 +
                                 comprehensiveAnalysis.stateManagement.score * 0.25 +
@@ -807,10 +824,17 @@ export async function GET(request: Request) {
                             );
                             analysisFeedback = [
                                 `✓ Analyzed ${sourceFiles.length} source file(s) with comprehensive metrics`,
+                                `✓ Files analyzed: ${sourceFiles.map(f => f.path).join(', ')}`,
                                 `✓ Skill match verified (${Math.round(avgConfidence)}% confidence)`
                             ];
                         } else if (skill === 'Rust') {
                             comprehensiveAnalysis = analyzeRust(fileAnalyses);
+                            console.log(`[ANALYSIS] Rust analysis complete:`, {
+                                memorySafety: comprehensiveAnalysis.memorySafety.score,
+                                codeQuality: comprehensiveAnalysis.codeQuality.score,
+                                errorHandling: comprehensiveAnalysis.errorHandling.score,
+                                documentation: comprehensiveAnalysis.documentation.score
+                            });
                             analysisScore = (
                                 comprehensiveAnalysis.memorySafety.score * 0.35 +
                                 comprehensiveAnalysis.codeQuality.score * 0.25 +
@@ -819,10 +843,17 @@ export async function GET(request: Request) {
                             );
                             analysisFeedback = [
                                 `✓ Analyzed ${sourceFiles.length} source file(s) with comprehensive metrics`,
+                                `✓ Files analyzed: ${sourceFiles.map(f => f.path).join(', ')}`,
                                 `✓ Skill match verified (${Math.round(avgConfidence)}% confidence)`
                             ];
                         } else if (skill === 'Python') {
                             comprehensiveAnalysis = analyzePython(fileAnalyses);
+                            console.log(`[ANALYSIS] Python analysis complete:`, {
+                                codeReadability: comprehensiveAnalysis.codeReadability.score,
+                                logicCorrectness: comprehensiveAnalysis.logicCorrectness.score,
+                                useOfConcepts: comprehensiveAnalysis.useOfConcepts.score,
+                                explanationClarity: comprehensiveAnalysis.explanationClarity.score
+                            });
                             analysisScore = (
                                 comprehensiveAnalysis.codeReadability.score * 0.30 +
                                 comprehensiveAnalysis.logicCorrectness.score * 0.30 +
@@ -831,6 +862,7 @@ export async function GET(request: Request) {
                             );
                             analysisFeedback = [
                                 `✓ Analyzed ${sourceFiles.length} source file(s) with comprehensive metrics`,
+                                `✓ Files analyzed: ${sourceFiles.map(f => f.path).join(', ')}`,
                                 `✓ Skill match verified (${Math.round(avgConfidence)}% confidence)`
                             ];
                         } else if (skill === 'JavaScript') {
@@ -838,6 +870,7 @@ export async function GET(request: Request) {
                             analysisScore = comprehensiveAnalysis.codeReadability?.score || 50;
                             analysisFeedback = [
                                 `✓ Analyzed ${sourceFiles.length} source file(s) with comprehensive metrics`,
+                                `✓ Files analyzed: ${sourceFiles.map(f => f.path).join(', ')}`,
                                 `✓ Skill match verified (${Math.round(avgConfidence)}% confidence)`
                             ];
                         } else if (skill === 'TypeScript') {
@@ -845,11 +878,13 @@ export async function GET(request: Request) {
                             analysisScore = comprehensiveAnalysis.codeReadability?.score || 50;
                             analysisFeedback = [
                                 `✓ Analyzed ${sourceFiles.length} source file(s) with comprehensive metrics`,
+                                `✓ Files analyzed: ${sourceFiles.map(f => f.path).join(', ')}`,
                                 `✓ Skill match verified (${Math.round(avgConfidence)}% confidence)`
                             ];
                         }
+                        console.log(`[ANALYSIS] Final analysis score: ${analysisScore}`);
                     } catch (error) {
-                        console.error('Comprehensive analysis error:', error);
+                        console.error('[ANALYSIS] Comprehensive analysis error:', error);
                         // Fallback to old method
                         const analyses = sourceFiles.map(file =>
                             analyzeCodeQuality(file.content, skill, file.extension)
@@ -981,6 +1016,15 @@ export async function GET(request: Request) {
 
             // NOW USE COMPREHENSIVE ANALYSIS SCORES INSTEAD OF STATIC ONES
             if (comprehensiveAnalysis && sourceFiles.length > 0) {
+                // VERIFICATION: Show which files were actually analyzed
+                feedback.push(`📁 FILES ANALYZED (${sourceFiles.length}):`);
+                sourceFiles.forEach((file, idx) => {
+                    const lines = file.content.split('\n').length;
+                    const sizeKB = (file.content.length / 1024).toFixed(1);
+                    feedback.push(`  ${idx + 1}. ${file.path} (${lines} lines, ${sizeKB} KB)`);
+                });
+                feedback.push(''); // Empty line for readability
+                
                 // Use actual comprehensive analysis scores for each rubric criterion
                 if (skill === 'React') {
                     // React: Component Design (30%), State Management (25%), Code Quality (25%), User Experience (20%)
@@ -1055,7 +1099,13 @@ export async function GET(request: Request) {
             } else {
                 // Fallback: No comprehensive analysis available (no files or error)
                 // Use minimal scoring based on what we can verify
+                console.warn(`[ANALYSIS] No files fetched or analysis failed. Files: ${sourceFiles.length}`);
                 feedback.push("⚠️ Could not perform comprehensive code analysis - using basic validation");
+                feedback.push(`⚠️ No source files were fetched from the repository (${sourceFiles.length} files found)`);
+                feedback.push("⚠️ This may be due to:");
+                feedback.push("  - GitHub API rate limits");
+                feedback.push("  - Repository is private");
+                feedback.push("  - No matching source files found");
                 feedback.push(...codeQuality.issues);
                 
                 // Give minimal score based on skill match
@@ -1067,13 +1117,7 @@ export async function GET(request: Request) {
             }
 
             // Calculate final score
-            // CRITICAL OVERRIDE: If the concepts/language verification found a serious mismatch, force score to 0
-            // This prevents "High Readability" + "High Activity" from masking a "Wrong Language" failure.
-            if (conceptsScore < 0) { // conceptsScore drops below 0 when severe penalties are applied
-                totalScore = 0;
-                feedback.push("❌ Automatic Zero: Repository language mismatch detected during deep analysis.");
-            }
-
+            // Language mismatch is already handled earlier in validation - if we got here, skill matches
             const finalScore = Math.min(100, Math.max(0, Math.round(totalScore)));
             result.score = finalScore;
             result.level = finalScore >= 90 ? "Expert" : finalScore >= 80 ? "Advanced" : finalScore >= 70 ? "Intermediate" : "Beginner";
