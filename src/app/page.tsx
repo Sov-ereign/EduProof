@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 
 import WebcamPixelGrid from "../components/WebcamPixelGrid";
 import DottedGlowBackground from "../components/dotted-glow-background";
+import AnimatedHeading from "../components/text-generate-effect";
 
 export default function LandingPage() {
   return (
@@ -75,10 +76,7 @@ export default function LandingPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.9, ease: "easeOut" }}
           >
-            <h1 className="text-6xl md:text-8xl font-bold tracking-tighter mb-8 bg-gradient-to-b from-white to-gray-500 bg-clip-text text-transparent">
-              Skill Credentials <br />
-              That Can’t Be Faked.
-            </h1>
+            <AnimatedHeading text="Skill Credentials That Can’t Be Faked." />
 
             <p className="text-xl text-gray-300 max-w-2xl mx-auto mb-10 leading-relaxed">
               EduProof Zero issues tamper-proof, wallet-bound credentials backed by
@@ -215,7 +213,7 @@ function StepCard({
           radius={1.6}
           color="rgba(255,255,255,0.25)"
           glowColor="rgba(124,58,237,0.9)"
-          opacity={0.6}
+          opacity={0.7}
           speedMin={0.3}
           speedMax={1.1}
         />
