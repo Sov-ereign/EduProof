@@ -41,15 +41,26 @@ To avoid GitHub API rate limits (which cause 403 errors), create a `.env.local` 
 touch .env.local
 ```
 
-Add your GitHub Personal Access Token:
+Add your GitHub Personal Access Token and Gemini API Key:
 
 ```env
 GITHUB_TOKEN=your_github_token_here
+GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
-1. Go to [GitHub Settings > Developer settings > Personal access tokens > Tokens (classic)](https://github.com/settings/tokens)
-2. Generate a new token with `public_repo` scope.
-3. Paste it into `.env.local`.
+**⚠️ IMPORTANT: Without GITHUB_TOKEN, you'll hit rate limits (60 requests/hour). With token: 5000 requests/hour!**
+
+1. **GitHub Token** (REQUIRED to avoid rate limits):
+   - Go to [GitHub Settings > Developer settings > Personal access tokens > Tokens (classic)](https://github.com/settings/tokens)
+   - Click "Generate new token (classic)"
+   - Select scope: `public_repo`
+   - Copy the token and paste into `.env.local`
+
+2. **Gemini API Key** (REQUIRED for test generation):
+   - Go to [Google AI Studio](https://makersuite.google.com/app/apikey)
+   - Click "Create API Key"
+   - Copy the key and paste into `.env.local`
+   - ✅ **Free tier works perfectly!** We use `gemini-1.5-flash` which is free and fast.
 
 ### 3. Deploy Smart Contract (Optional)
 
@@ -83,9 +94,10 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 1. **Connect Wallet**: Click "Connect Freighter" and approve the connection
 2. **Select Skill**: Choose from Python, Rust, React, JavaScript, or TypeScript
-3. **Submit Evidence**: Paste your GitHub repo, Google Doc, Loom video, or portfolio link
-4. **Get Evaluated**: AI analyzes your evidence against a public rubric
-5. **Mint Credential**: If you pass (score ≥ 70), mint your credential as an NFT
+3. **Submit Evidence**: Paste your GitHub repo URL
+4. **Take Test**: Complete 10 MCQ questions (must score ≥70% to proceed)
+5. **Solve Coding Challenges**: Complete 3 algorithm challenges based on your repo
+6. **Mint Credential**: If all tests pass, mint your credential as an NFT
 
 ### For Verifiers/Employers
 

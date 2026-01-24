@@ -7,6 +7,7 @@ import { useSession, signIn, signOut } from "next-auth/react";
 import { connectWallet } from "@/lib/stellar";
 import Certificate from "@/components/Certificate";
 import ScrollReveal from "@/components/ScrollReveal";
+import TestFlowContainer, { type RepoAnalysis } from "@/components/TestFlowContainer";
 
 const SKILLS = [
     { name: "Python", category: "Tech" },
@@ -35,6 +36,9 @@ export default function StudentDashboard() {
     const [mintSuccess, setMintSuccess] = useState<any>(null);
     const [showCertificate, setShowCertificate] = useState(false);
     const [certificateData, setCertificateData] = useState<any>(null);
+    const [testReady, setTestReady] = useState(false);
+    const [repoAnalysis, setRepoAnalysis] = useState<RepoAnalysis | null>(null);
+    const [finalTestScore, setFinalTestScore] = useState<number | null>(null);
 
     // Auto-fill evidence link with user's GitHub username to enforce ownership
     useEffect(() => {
@@ -146,24 +150,47 @@ export default function StudentDashboard() {
         setAnalyzing(true);
         setResult(null);
         setError(null);
+        setTestReady(false);
+        setRepoAnalysis(null);
+        setFinalTestScore(null);
 
         try {
+            // Use new prepare-test endpoint
             const response = await fetch(
-                `/api/evaluate?url=${encodeURIComponent(evidenceLink.trim())}&skill=${encodeURIComponent(selectedSkill)}`
+                `/api/evaluate/prepare-test?url=${encodeURIComponent(evidenceLink.trim())}&skill=${encodeURIComponent(selectedSkill)}`
             );
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error || "Evaluation failed");
+                throw new Error(data.error || "Failed to prepare test");
             }
 
-            setResult(data);
+            // Store repo analysis and show test flow
+            setRepoAnalysis(data.repoAnalysis);
+            setTestReady(true);
         } catch (e: any) {
             console.error(e);
-            setError(e.message || "Failed to evaluate evidence. Please check your URL.");
+            setError(e.message || "Failed to prepare test. Please check your URL.");
         } finally {
             setAnalyzing(false);
         }
+    };
+
+    const handleTestComplete = (score: number) => {
+        setFinalTestScore(score);
+        // Calculate level from score
+        const level = score >= 90 ? "Expert" : score >= 80 ? "Advanced" : score >= 70 ? "Intermediate" : "Beginner";
+        
+        // Set result for minting
+        setResult({
+            score,
+            level,
+            feedback: [`Test completed with score: ${score}/100`],
+            owner: repoAnalysis?.owner || 'Student',
+            languages: repoAnalysis?.languages || {},
+            rubric: { name: selectedSkill }
+        });
+        setTestReady(false);
     };
 
     const handleMint = async () => {
@@ -476,7 +503,21 @@ export default function StudentDashboard() {
                             </div>
                         )}
 
-                        {result && !analyzing && (
+                        {testReady && repoAnalysis && !analyzing && (
+                            <motion.div
+                                initial={{ scale: 0.95, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                className="flex-1 flex flex-col overflow-y-auto"
+                            >
+                                <TestFlowContainer
+                                    repoAnalysis={repoAnalysis}
+                                    skill={selectedSkill}
+                                    onComplete={handleTestComplete}
+                                />
+                            </motion.div>
+                        )}
+
+                        {result && !analyzing && !testReady && (
                             <motion.div
                                 initial={{ scale: 0.95, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
@@ -504,7 +545,7 @@ export default function StudentDashboard() {
                                         <p className="text-slate-400 text-xs mt-10 font-bold uppercase tracking-widest leading-relaxed">Please submit evidence that actually contains <span className="text-purple-600">{selectedSkill}</span> code for a valid assessment.</p>
                                     </div>
                                 ) : (
-                                    // SUCCESSFUL EVALUATION
+                                    // SUCCESSFUL EVALUATION - Show mint button only after tests pass
                                     <EvaluationResults
                                         result={result}
                                         selectedSkill={selectedSkill}
