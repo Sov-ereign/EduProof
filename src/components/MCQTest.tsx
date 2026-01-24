@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle, XCircle, AlertCircle, RotateCcw, Loader2 } from "lucide-react";
+import { CheckCircle, XCircle, AlertCircle, RotateCcw, Loader2, Sparkles, ChevronRight } from "lucide-react";
 
 export interface MCQQuestion {
     id: string;
@@ -60,6 +60,35 @@ export default function MCQTest({ questions, onComplete, onRetry }: MCQTestProps
         setCurrentQuestion(0);
         if (onRetry) {
             onRetry();
+        }
+    };
+
+    const handleMaster = () => {
+        // Auto-select all correct answers
+        const masterAnswers: Record<string, number> = {};
+        questions.forEach(q => {
+            masterAnswers[q.id] = q.correctAnswer;
+        });
+        setAnswers(masterAnswers);
+        
+        // Auto-submit with full marks after a brief delay
+        setTimeout(() => {
+            const calculatedScore = 100; // Full marks
+            setScore(calculatedScore);
+            setSubmitted(true);
+            onComplete(calculatedScore, true); // Always passes with master mode
+        }, 500);
+    };
+
+    const handleNext = () => {
+        if (currentQuestion < questions.length - 1) {
+            setCurrentQuestion(currentQuestion + 1);
+        }
+    };
+
+    const handlePrevious = () => {
+        if (currentQuestion > 0) {
+            setCurrentQuestion(currentQuestion - 1);
         }
     };
 
@@ -210,9 +239,9 @@ export default function MCQTest({ questions, onComplete, onRetry }: MCQTestProps
                 <div className="space-y-4">
                     <motion.div
                         key={currentQuestion}
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -20 }}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.1 }}
                         className="bg-gray-900/50 rounded-xl p-6 border border-gray-800"
                     >
                         <h3 className="text-xl font-semibold text-white mb-4">
@@ -243,26 +272,39 @@ export default function MCQTest({ questions, onComplete, onRetry }: MCQTestProps
                     </motion.div>
 
                     {/* Navigation */}
-                    <div className="flex justify-between">
+                    <div className="flex justify-between items-center gap-3">
                         <button
-                            onClick={() => setCurrentQuestion(Math.max(0, currentQuestion - 1))}
+                            onClick={handlePrevious}
                             disabled={currentQuestion === 0}
-                            className="px-4 py-2 bg-gray-800 text-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-700 transition"
+                            className="px-4 py-2 bg-gray-800 text-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-700 transition flex items-center gap-2"
                         >
+                            <ChevronRight className="w-4 h-4 rotate-180" />
                             Previous
                         </button>
+                        <div className="flex gap-2">
+                            <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={handleMaster}
+                                className="px-4 py-2 bg-gradient-to-r from-yellow-500 to-amber-500 text-white rounded-lg font-bold transition flex items-center gap-2 shadow-lg shadow-yellow-500/30"
+                            >
+                                <Sparkles className="w-4 h-4" />
+                                Master
+                            </motion.button>
+                            <button
+                                onClick={() => setShowAll(true)}
+                                className="px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition"
+                            >
+                                Show All
+                            </button>
+                        </div>
                         <button
-                            onClick={() => setShowAll(true)}
-                            className="px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition"
-                        >
-                            Show All Questions
-                        </button>
-                        <button
-                            onClick={() => setCurrentQuestion(Math.min(questions.length - 1, currentQuestion + 1))}
+                            onClick={handleNext}
                             disabled={currentQuestion === questions.length - 1}
-                            className="px-4 py-2 bg-gray-800 text-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-700 transition"
+                            className="px-4 py-2 bg-gray-800 text-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-700 transition flex items-center gap-2"
                         >
                             Next
+                            <ChevronRight className="w-4 h-4" />
                         </button>
                     </div>
                 </div>
@@ -308,17 +350,39 @@ export default function MCQTest({ questions, onComplete, onRetry }: MCQTestProps
                             </motion.div>
                         );
                     })}
-                    <button
-                        onClick={() => setShowAll(false)}
-                        className="px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition"
-                    >
-                        Back to Single View
-                    </button>
+                    <div className="flex justify-between items-center gap-3">
+                        <button
+                            onClick={() => setShowAll(false)}
+                            className="px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition"
+                        >
+                            Back to Single View
+                        </button>
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={handleMaster}
+                            className="px-4 py-2 bg-gradient-to-r from-yellow-500 to-amber-500 text-white rounded-lg font-bold transition flex items-center gap-2 shadow-lg shadow-yellow-500/30"
+                        >
+                            <Sparkles className="w-4 h-4" />
+                            Master Mode
+                        </motion.button>
+                    </div>
                 </div>
             )}
 
             {/* Submit Button */}
-            <div className="mt-6 flex justify-center">
+            <div className="mt-6 flex justify-center gap-3">
+                {!allAnswered && (
+                    <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={handleMaster}
+                        className="px-6 py-3 rounded-xl font-bold text-base bg-gradient-to-r from-yellow-500 to-amber-500 text-white transition flex items-center gap-2 shadow-lg shadow-yellow-500/30"
+                    >
+                        <Sparkles className="w-5 h-5" />
+                        Master Mode
+                    </motion.button>
+                )}
                 <button
                     onClick={handleSubmit}
                     disabled={!allAnswered || submitted}

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Play, CheckCircle, XCircle, Loader2, AlertCircle } from "lucide-react";
+import { Play, CheckCircle, XCircle, Loader2, AlertCircle, Sparkles, ChevronRight } from "lucide-react";
 import Editor from "react-simple-code-editor";
 import { highlight, languages } from "prismjs";
 import "prismjs/components/prism-javascript";
@@ -29,9 +29,10 @@ interface CodeEditorProps {
     language: string;
     onComplete: (passed: boolean) => void;
     onNext?: () => void;
+    isLastChallenge?: boolean;
 }
 
-export default function CodeEditor({ challenge, language, onComplete, onNext }: CodeEditorProps) {
+export default function CodeEditor({ challenge, language, onComplete, onNext, isLastChallenge = false }: CodeEditorProps) {
     const [code, setCode] = useState(challenge.starterCode || challenge.functionSignature + "\n    pass");
     const [validating, setValidating] = useState(false);
     const [validationResult, setValidationResult] = useState<any>(null);
@@ -91,6 +92,24 @@ export default function CodeEditor({ challenge, language, onComplete, onNext }: 
         } finally {
             setValidating(false);
         }
+    };
+
+    const handleMaster = () => {
+        // Auto-pass all test cases
+        const masterResult = {
+            passed: true,
+            passedTests: challenge.testCases.length,
+            totalTests: challenge.testCases.length,
+            results: challenge.testCases.map((tc, i) => ({
+                testCase: i + 1,
+                passed: true,
+                expected: tc.expectedOutput,
+                got: tc.expectedOutput
+            }))
+        };
+        setValidationResult(masterResult);
+        setSubmitted(true);
+        onComplete(true);
     };
 
     const canProceed = validationResult?.passed === true;
@@ -215,7 +234,7 @@ export default function CodeEditor({ challenge, language, onComplete, onNext }: 
             </div>
 
             {/* Run/Submit Button */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                     {submitted && validationResult && (
                         <div className={`flex items-center gap-2 ${
@@ -239,34 +258,47 @@ export default function CodeEditor({ challenge, language, onComplete, onNext }: 
                         </div>
                     )}
                 </div>
-                <button
-                    onClick={handleRun}
-                    disabled={validating || (submitted && canProceed)}
-                    className={`px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition ${
-                        validating
-                            ? "bg-gray-700 text-gray-400 cursor-not-allowed"
-                            : submitted && canProceed
-                            ? "bg-green-600 text-white cursor-not-allowed"
-                            : "bg-gradient-to-r from-purple-600 to-indigo-600 hover:opacity-90 text-white"
-                    }`}
-                >
-                    {validating ? (
-                        <>
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                            Running Tests...
-                        </>
-                    ) : submitted && canProceed ? (
-                        <>
-                            <CheckCircle className="w-5 h-5" />
-                            All Tests Passed!
-                        </>
-                    ) : (
-                        <>
-                            <Play className="w-5 h-5" />
-                            Run Tests
-                        </>
+                <div className="flex items-center gap-2">
+                    {!submitted && (
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={handleMaster}
+                            className="px-4 py-3 rounded-xl font-bold bg-gradient-to-r from-yellow-500 to-amber-500 text-white transition flex items-center gap-2 shadow-lg shadow-yellow-500/30"
+                        >
+                            <Sparkles className="w-5 h-5" />
+                            Master
+                        </motion.button>
                     )}
-                </button>
+                    <button
+                        onClick={handleRun}
+                        disabled={validating || (submitted && canProceed)}
+                        className={`px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition ${
+                            validating
+                                ? "bg-gray-700 text-gray-400 cursor-not-allowed"
+                                : submitted && canProceed
+                                ? "bg-green-600 text-white cursor-not-allowed"
+                                : "bg-gradient-to-r from-purple-600 to-indigo-600 hover:opacity-90 text-white"
+                        }`}
+                    >
+                        {validating ? (
+                            <>
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                                Running Tests...
+                            </>
+                        ) : submitted && canProceed ? (
+                            <>
+                                <CheckCircle className="w-5 h-5" />
+                                All Tests Passed!
+                            </>
+                        ) : (
+                            <>
+                                <Play className="w-5 h-5" />
+                                Run Tests
+                            </>
+                        )}
+                    </button>
+                </div>
             </div>
 
             {submitted && !canProceed && (
@@ -281,14 +313,31 @@ export default function CodeEditor({ challenge, language, onComplete, onNext }: 
                 </div>
             )}
 
-            {submitted && canProceed && onNext && (
+            {submitted && canProceed && (
                 <motion.button
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    onClick={onNext}
-                    className="w-full px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:opacity-90 text-white rounded-xl font-bold transition"
+                    onClick={() => onNext && onNext()}
+                    disabled={!onNext}
+                    className={`w-full px-6 py-3 rounded-xl font-bold transition flex items-center justify-center gap-2 ${
+                        onNext
+                            ? "bg-gradient-to-r from-green-600 to-emerald-600 hover:opacity-90 text-white"
+                            : "bg-gray-700 text-gray-400 cursor-not-allowed"
+                    }`}
                 >
-                    Next Challenge →
+                    {isLastChallenge ? (
+                        <>
+                            View Final Report
+                            <ChevronRight className="w-5 h-5" />
+                        </>
+                    ) : onNext ? (
+                        <>
+                            Next Challenge
+                            <ChevronRight className="w-5 h-5" />
+                        </>
+                    ) : (
+                        "All Challenges Complete"
+                    )}
                 </motion.button>
             )}
         </div>
