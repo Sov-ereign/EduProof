@@ -1,7 +1,10 @@
 import NextAuth from "next-auth";
 import GithubProvider from "next-auth/providers/github";
+import { MongoDBAdapter } from "@auth/mongodb-adapter";
+import clientPromise from "@/lib/mongodb";
 
 export const authOptions = {
+    adapter: MongoDBAdapter(clientPromise) as any,
     providers: [
         GithubProvider({
             clientId: process.env.GITHUB_ID || "",
@@ -9,17 +12,12 @@ export const authOptions = {
         }),
     ],
     callbacks: {
-        async session({ session, token, user }: any) {
-            // Pass the username to the client
-            session.user.username = token.username;
+        async session({ session, user }: any) {
+            // Pass the subscription data from the DB user to the session
+            session.user.id = user.id;
+            session.user.isSubscribed = user.isSubscribed || false;
+            session.user.username = session.user.username || user.name;
             return session;
-        },
-        async jwt({ token, account, profile }: any) {
-            // Persist the GitHub username to the token
-            if (profile) {
-                token.username = profile.login;
-            }
-            return token;
         },
     },
 };

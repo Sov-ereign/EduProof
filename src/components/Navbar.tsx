@@ -26,6 +26,10 @@ export default function Navbar() {
                             Protocol
                             <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-white transition-all group-hover:w-full" />
                         </Link>
+                        <Link href="/pricing" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors relative group">
+                            Pricing
+                            <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-white transition-all group-hover:w-full" />
+                        </Link>
                     </div>
                 </div>
 

@@ -339,3 +339,199 @@ export async function getCredential(userAddress: string, skill: string) {
     return null;
   }
 }
+// Record a verification event on-chain
+export async function recordVerification(
+  verifierAddress: string,
+  candidateAddress: string,
+  skill: string
+) {
+  try {
+    let account;
+    try {
+      account = await horizonServer.loadAccount(verifierAddress);
+    } catch (e: any) {
+      if (e.response?.status === 404 || (e.message && e.message.includes("not found"))) {
+        console.log(`Account ${verifierAddress} not found. Funding with Friendbot...`);
+        try {
+          await fetch(`https://friendbot.stellar.org?addr=${verifierAddress}`);
+          for (let i = 0; i < 5; i++) { // Increased retries
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            try {
+              account = await horizonServer.loadAccount(verifierAddress);
+              if (account) break;
+            } catch (retryErr) {
+              console.log(`Retry ${i + 1} finding account...`);
+            }
+          }
+          if (!account) throw new Error("Account still not found after Friendbot funding");
+        } catch (fbErr: any) {
+          throw new Error("Stellar Testnet Account not found. Please fund it manually via Stellar Laboratory.");
+        }
+      } else {
+        throw e;
+      }
+    }
+
+    // Memo format: "EV:Candidate_Skill"
+    // Truncate to fit in 28 chars
+    const memoText = `EV:${candidateAddress.slice(0, 8)}:${skill.slice(0, 10)}`.slice(0, 28);
+
+    const operation = Operation.payment({
+      destination: verifierAddress, // Send to self just for memo
+      asset: Asset.native(),
+      amount: "0.00001"
+    });
+
+    const tx = new TransactionBuilder(account, { fee: "100" })
+      .addOperation(operation)
+      .addMemo(Memo.text(memoText))
+      .setTimeout(30)
+      .setNetworkPassphrase(NETWORK_PASSPHRASE)
+      .build();
+
+    const xdrString = tx.toXDR();
+    const signedTxResponse = await signTransaction(xdrString, { networkPassphrase: NETWORK_PASSPHRASE });
+
+    if (!signedTxResponse.signedTxXdr) {
+      throw new Error("Transaction was declined");
+    }
+
+    const txFromXDR = TransactionBuilder.fromXDR(signedTxResponse.signedTxXdr, NETWORK_PASSPHRASE);
+    const result = await server.sendTransaction(txFromXDR);
+
+    return {
+      success: true,
+      hash: result.hash
+    };
+  } catch (error: any) {
+    console.error("Verification record error:", error);
+    throw new Error(error.message || "Failed to record verification on-chain");
+  }
+}
+
+// Record a subscription payment on-chain
+export async function recordSubscription(
+  verifierAddress: string,
+  amount: number,
+  currency: string = "USD"
+) {
+  try {
+    let account;
+    try {
+      account = await horizonServer.loadAccount(verifierAddress);
+    } catch (e: any) {
+      if (e.response?.status === 404 || (e.message && e.message.includes("not found"))) {
+        console.log(`Account ${verifierAddress} not found. Funding with Friendbot...`);
+        try {
+          const fbResponse = await fetch(`https://friendbot.stellar.org?addr=${verifierAddress}`);
+          if (!fbResponse.ok) console.error("Friendbot failed:", await fbResponse.text());
+
+          // Wait and retry getting account up to 5 times
+          for (let i = 0; i < 5; i++) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            try {
+              account = await horizonServer.loadAccount(verifierAddress);
+              if (account) break;
+            } catch (retryErr) {
+              console.log(`Retry ${i + 1} finding account...`);
+            }
+          }
+          if (!account) throw new Error("Account still not found after Friendbot funding");
+        } catch (fbErr: any) {
+          throw new Error("Stellar Testnet Account not found. Please fund it: https://laboratory.stellar.org/#account-creator");
+        }
+      } else {
+        throw e;
+      }
+    }
+
+    // Memo format: "SUB:MONTHLY:30"
+    const memoText = `SUB:MONTHLY:${amount}`.slice(0, 28);
+
+    const operation = Operation.payment({
+      destination: verifierAddress, // Send to self just for memo
+      asset: Asset.native(),
+      amount: "0.0001" // slightly higher for visibility
+    });
+
+    const tx = new TransactionBuilder(account, { fee: "100" })
+      .addOperation(operation)
+      .addMemo(Memo.text(memoText))
+      .setTimeout(30)
+      .setNetworkPassphrase(NETWORK_PASSPHRASE)
+      .build();
+
+    const xdrString = tx.toXDR();
+    const signedTxResponse = await signTransaction(xdrString, { networkPassphrase: NETWORK_PASSPHRASE });
+
+    if (!signedTxResponse.signedTxXdr) {
+      throw new Error("Transaction was declined");
+    }
+
+    const txFromXDR = TransactionBuilder.fromXDR(signedTxResponse.signedTxXdr, NETWORK_PASSPHRASE);
+    const result = await server.sendTransaction(txFromXDR);
+
+    return {
+      success: true,
+      hash: result.hash
+    };
+  } catch (error: any) {
+    console.error("Subscription record error:", error);
+    throw new Error(error.message || "Failed to record subscription on-chain");
+  }
+}
+
+// Check if verifier has an active subscription (paid in last 30 days)
+export async function checkSubscriptionStatus(verifierAddress: string) {
+  try {
+    const history = await horizonServer.transactions()
+      .forAccount(verifierAddress)
+      .limit(50)
+      .order("desc")
+      .call();
+
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    for (const record of history.records) {
+      if (record.successful && record.memo_type === "text" && record.memo?.startsWith("SUB:MONTHLY:")) {
+        const paymentDate = new Date(record.created_at);
+        if (paymentDate > thirtyDaysAgo) {
+          return { active: true, date: record.created_at, hash: record.hash };
+        }
+      }
+    }
+    return { active: false };
+  } catch (e) {
+    console.warn("Error checking subscription", e);
+    return { active: false };
+  }
+}
+
+// Fetch all subscription records for a verifier
+export async function fetchSubscriptionHistory(verifierAddress: string) {
+  try {
+    console.log(`Fetching billing history for: ${verifierAddress}`);
+    const history = await horizonServer.transactions()
+      .forAccount(verifierAddress)
+      .limit(50)
+      .order("desc")
+      .call();
+
+    const records = history.records
+      .filter(record => record.memo_type === "text" && record.memo?.startsWith("SUB:MONTHLY:"))
+      .map(record => ({
+        hash: record.hash,
+        date: record.created_at,
+        amount: record.memo?.split(":")[2] || "30",
+        memo: record.memo,
+        success: record.successful
+      }));
+
+    console.log(`Found ${records.length} billing records`);
+    return records;
+  } catch (e) {
+    console.warn("Error fetching subscription history", e);
+    return [];
+  }
+}
