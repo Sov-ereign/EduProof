@@ -88,6 +88,207 @@ async function callOpenRouter(model: string, messages: Array<{ role: string; con
     return data.choices[0]?.message?.content || '';
 }
 
+/**
+ * Robust JSON parser that handles malformed JSON from AI models
+ * Fixes common issues like Python tuples, markdown code blocks, etc.
+ * Preserves string contents and handles escaped characters properly.
+ */
+function parseJSONSafely(text: string, context: string = 'JSON'): any {
+    let jsonText = text.trim();
+    
+    // Remove markdown code blocks
+    if (jsonText.includes('```json')) {
+        const match = jsonText.match(/```json\s*([\s\S]*?)\s*```/);
+        if (match) jsonText = match[1].trim();
+    } else if (jsonText.includes('```')) {
+        const match = jsonText.match(/```\s*([\s\S]*?)\s*```/);
+        if (match) jsonText = match[1].trim();
+    }
+    
+    // Extract JSON by finding the outermost array or object
+    // This handles cases where there's extra text before/after
+    const extractJSON = (str: string): string => {
+        // Find the first [ or {
+        const firstBracket = Math.min(
+            str.indexOf('[') !== -1 ? str.indexOf('[') : Infinity,
+            str.indexOf('{') !== -1 ? str.indexOf('{') : Infinity
+        );
+        
+        if (firstBracket === Infinity) {
+            return str;
+        }
+        
+        const startIndex = firstBracket;
+        const startChar = str[startIndex];
+        const endChar = startChar === '[' ? ']' : '}';
+        
+        // Track depth, but be careful inside strings
+        let depth = 0;
+        let inString = false;
+        let escapeNext = false;
+        let lastIndex = startIndex;
+        
+        for (let i = startIndex; i < str.length; i++) {
+            const char = str[i];
+            
+            if (escapeNext) {
+                escapeNext = false;
+                continue;
+            }
+            
+            if (char === '\\') {
+                escapeNext = true;
+                continue;
+            }
+            
+            if (char === '"' && !escapeNext) {
+                inString = !inString;
+                continue;
+            }
+            
+            if (!inString) {
+                if (char === startChar) {
+                    depth++;
+                } else if (char === endChar) {
+                    depth--;
+                    if (depth === 0) {
+                        lastIndex = i + 1;
+                        break;
+                    }
+                }
+            }
+        }
+        
+        return str.substring(startIndex, lastIndex);
+    };
+    
+    // Extract the JSON structure
+    jsonText = extractJSON(jsonText);
+    
+    // Fix Python-style tuples OUTSIDE of strings
+    // We need to be careful not to modify string contents
+    const fixTuples = (str: string): string => {
+        let result = '';
+        let inString = false;
+        let escapeNext = false;
+        let i = 0;
+        
+        while (i < str.length) {
+            const char = str[i];
+            
+            if (escapeNext) {
+                result += char;
+                escapeNext = false;
+                i++;
+                continue;
+            }
+            
+            if (char === '\\') {
+                result += char;
+                escapeNext = true;
+                i++;
+                continue;
+            }
+            
+            if (char === '"') {
+                inString = !inString;
+                result += char;
+                i++;
+                continue;
+            }
+            
+            if (!inString) {
+                // Look for tuples: (value1, value2, ...)
+                // Match pattern: ( followed by content, followed by )
+                // But only if it's in a value context (after : or , or [)
+                if (char === '(' && (i === 0 || /[\[:,\s]/.test(str[i - 1]))) {
+                    // Find the matching closing parenthesis
+                    let tupleDepth = 1;
+                    let tupleStart = i;
+                    let tupleEnd = i + 1;
+                    let tupleInString = false;
+                    let tupleEscape = false;
+                    
+                    for (let j = i + 1; j < str.length && tupleDepth > 0; j++) {
+                        const tupleChar = str[j];
+                        
+                        if (tupleEscape) {
+                            tupleEscape = false;
+                            continue;
+                        }
+                        
+                        if (tupleChar === '\\') {
+                            tupleEscape = true;
+                            continue;
+                        }
+                        
+                        if (tupleChar === '"') {
+                            tupleInString = !tupleInString;
+                            continue;
+                        }
+                        
+                        if (!tupleInString) {
+                            if (tupleChar === '(') {
+                                tupleDepth++;
+                            } else if (tupleChar === ')') {
+                                tupleDepth--;
+                                if (tupleDepth === 0) {
+                                    tupleEnd = j + 1;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    
+                    if (tupleDepth === 0) {
+                        // Extract tuple content
+                        const tupleContent = str.substring(tupleStart + 1, tupleEnd - 1);
+                        // Replace tuple with array
+                        result += '[' + tupleContent + ']';
+                        i = tupleEnd;
+                        continue;
+                    }
+                }
+            }
+            
+            result += char;
+            i++;
+        }
+        
+        return result;
+    };
+    
+    jsonText = fixTuples(jsonText);
+    
+    // Try parsing
+    try {
+        return JSON.parse(jsonText);
+    } catch (parseError: any) {
+        // Log the problematic text for debugging
+        const errorPos = parseError.message.match(/position (\d+)/)?.[1];
+        console.error(`Failed to parse ${context}:`, parseError.message);
+        if (errorPos) {
+            const pos = parseInt(errorPos);
+            const start = Math.max(0, pos - 100);
+            const end = Math.min(jsonText.length, pos + 100);
+            console.error('Problematic JSON around error position:', jsonText.substring(start, end));
+            console.error('Error at position:', pos, 'Character:', jsonText[pos]);
+        } else {
+            console.error('Problematic JSON text (first 1000 chars):', jsonText.substring(0, 1000));
+        }
+        
+        // Last resort: try to fix common issues
+        // Remove any trailing commas before } or ]
+        jsonText = jsonText.replace(/,(\s*[}\]])/g, '$1');
+        
+        try {
+            return JSON.parse(jsonText);
+        } catch (finalError: any) {
+            throw new Error(`Invalid JSON in ${context}: ${parseError.message}. Raw text preview: ${jsonText.substring(0, 500)}`);
+        }
+    }
+}
+
 export interface RepoAnalysis {
     files: Array<{ path: string; content: string; extension: string }>;
     readme: string;
@@ -172,15 +373,8 @@ Return ONLY a JSON array of objects with the following structure:
             { role: 'user', content: prompt }
         ], 3000);
 
-        // Extract JSON from response (handle markdown code blocks if present)
-        let jsonText = text.trim();
-        if (jsonText.startsWith('```json')) {
-            jsonText = jsonText.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-        } else if (jsonText.startsWith('```')) {
-            jsonText = jsonText.replace(/```\n?/g, '');
-        }
-
-        const questions: MCQQuestion[] = JSON.parse(jsonText);
+        // Parse JSON with robust error handling
+        const questions: MCQQuestion[] = parseJSONSafely(text, 'MCQ questions');
 
         // Validate and add IDs
         if (!Array.isArray(questions)) {
@@ -285,15 +479,8 @@ Generate exactly ${count} challenges.`;
             { role: 'user', content: prompt }
         ], 4000);
 
-        // Extract JSON from response
-        let jsonText = text.trim();
-        if (jsonText.startsWith('```json')) {
-            jsonText = jsonText.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-        } else if (jsonText.startsWith('```')) {
-            jsonText = jsonText.replace(/```\n?/g, '');
-        }
-
-        const challenges: CodingChallenge[] = JSON.parse(jsonText);
+        // Parse JSON with robust error handling
+        const challenges: CodingChallenge[] = parseJSONSafely(text, 'coding challenges');
 
         // Validate and add IDs
         if (!Array.isArray(challenges)) {
