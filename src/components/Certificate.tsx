@@ -108,10 +108,11 @@ export default function Certificate({
         </button>
 
         {/* Certificate - Elegant Design */}
-        <div 
-          ref={certificateRef} 
-          className="relative bg-white p-16"
+        <div
+          ref={certificateRef}
+          className="relative p-16"
           style={{
+            backgroundColor: '#ffffff',
             backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cpattern id='marble' x='0' y='0' width='100' height='100' patternUnits='userSpaceOnUse'%3E%3Crect fill='%23ffffff' width='100' height='100'/%3E%3Cpath d='M0 50 Q25 30 50 50 T100 50' stroke='%23f0f0f0' fill='none' stroke-width='0.5' opacity='0.3'/%3E%3Cpath d='M0 30 Q20 20 40 30 T80 30' stroke='%23e8e8e8' fill='none' stroke-width='0.3' opacity='0.2'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='100' height='100' fill='url(%23marble)'/%3E%3C/svg%3E")`,
             minHeight: '800px',
             position: 'relative'
@@ -139,22 +140,22 @@ export default function Certificate({
 
           {/* Top Left Corner Accent */}
           <div className="absolute top-8 left-16" style={{ width: '60px', height: '60px' }}>
-            <div className="absolute top-0 left-0 w-12 h-1 bg-yellow-600"></div>
-            <div className="absolute top-0 left-0 w-1 h-12 bg-yellow-600"></div>
-            <div className="absolute top-10 left-10 w-4 h-4 bg-yellow-600"></div>
+            <div className="absolute top-0 left-0 w-12 h-1" style={{ backgroundColor: '#ca8a04' }}></div>
+            <div className="absolute top-0 left-0 w-1 h-12" style={{ backgroundColor: '#ca8a04' }}></div>
+            <div className="absolute top-10 left-10 w-4 h-4" style={{ backgroundColor: '#ca8a04' }}></div>
           </div>
 
           {/* Bottom Right Corner Accent */}
           <div className="absolute bottom-8 right-16" style={{ width: '60px', height: '60px' }}>
-            <div className="absolute bottom-0 right-0 w-12 h-1 bg-yellow-600"></div>
-            <div className="absolute bottom-0 right-0 w-1 h-12 bg-yellow-600"></div>
-            <div className="absolute bottom-10 right-10 w-4 h-4 bg-yellow-600"></div>
+            <div className="absolute bottom-0 right-0 w-12 h-1" style={{ backgroundColor: '#ca8a04' }}></div>
+            <div className="absolute bottom-0 right-0 w-1 h-12" style={{ backgroundColor: '#ca8a04' }}></div>
+            <div className="absolute bottom-10 right-10 w-4 h-4" style={{ backgroundColor: '#ca8a04' }}></div>
           </div>
 
           {/* Gold Seal/Emblem at Top */}
           <div className="text-center mb-8 relative z-10">
             <div className="inline-block mb-6">
-              <div 
+              <div
                 className="relative mx-auto"
                 style={{
                   width: '120px',
@@ -168,8 +169,8 @@ export default function Certificate({
                   position: 'relative'
                 }}
               >
-                <div className="absolute inset-2 border-2 border-yellow-300 rounded-full opacity-50"></div>
-                <span className="text-white text-4xl font-bold relative z-10" style={{ fontFamily: 'serif' }}>EP</span>
+                <div className="absolute inset-2 border-2 rounded-full opacity-50" style={{ borderColor: '#fde047' }}></div>
+                <span className="text-4xl font-bold relative z-10" style={{ fontFamily: 'serif', color: '#ffffff' }}>EP</span>
                 {/* Ribbon tails */}
                 <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 w-16 h-8" style={{
                   background: 'linear-gradient(135deg, #d4af37 0%, #b8941f 100%)',
@@ -187,53 +188,54 @@ export default function Certificate({
 
           {/* Main Content */}
           <div className="text-center px-8 relative z-10" style={{ fontFamily: 'serif' }}>
-            <h1 className="text-6xl font-bold text-black mb-3 tracking-wide" style={{ 
+            <h1 className="text-6xl font-bold mb-3 tracking-wide" style={{
               fontFamily: 'serif',
-              letterSpacing: '0.1em'
+              letterSpacing: '0.1em',
+              color: '#000000'
             }}>
               CERTIFICATE
             </h1>
-            <h2 className="text-3xl font-semibold text-black mb-12" style={{ fontFamily: 'serif' }}>
+            <h2 className="text-3xl font-semibold mb-12" style={{ fontFamily: 'serif', color: '#000000' }}>
               OF ACHIEVEMENT
             </h2>
 
-            <p className="text-xl text-black mb-8" style={{ fontFamily: 'serif' }}>
+            <p className="text-xl mb-8" style={{ fontFamily: 'serif', color: '#000000' }}>
               THIS CERTIFICATE IS PRESENTED TO :
             </p>
             <div className="mb-8">
-              <div className="inline-block border-b-2 border-black pb-2 px-16 mb-8">
-                <h2 className="text-5xl font-bold text-black" style={{ fontFamily: 'serif' }}>
+              <div className="inline-block border-b-2 pb-2 px-16 mb-8" style={{ borderColor: '#000000' }}>
+                <h2 className="text-5xl font-bold" style={{ fontFamily: 'serif', color: '#000000' }}>
                   {userName}
                 </h2>
               </div>
             </div>
 
-            <p className="text-lg text-black mb-4 leading-relaxed" style={{ fontFamily: 'serif' }}>
+            <p className="text-lg mb-4 leading-relaxed" style={{ fontFamily: 'serif', color: '#000000' }}>
               Congratulations on your remarkable success!
             </p>
-            <p className="text-lg text-black mb-8 leading-relaxed" style={{ fontFamily: 'serif' }}>
+            <p className="text-lg mb-8 leading-relaxed" style={{ fontFamily: 'serif', color: '#000000' }}>
               Your dedication and passion have set a remarkable standard.
             </p>
 
             {/* Skill Details */}
             <div className="my-12">
-              <p className="text-2xl font-semibold text-black mb-4" style={{ fontFamily: 'serif' }}>
+              <p className="text-2xl font-semibold mb-4" style={{ fontFamily: 'serif', color: '#000000' }}>
                 {skill} - {level}
               </p>
-              <p className="text-xl text-black mb-2" style={{ fontFamily: 'serif' }}>
+              <p className="text-xl mb-2" style={{ fontFamily: 'serif', color: '#000000' }}>
                 Score: {score}/100
               </p>
-              <p className="text-sm text-gray-600 mb-4" style={{ fontFamily: 'serif' }}>
+              <p className="text-sm mb-4" style={{ fontFamily: 'serif', color: '#4b5563' }}>
                 Issued on {date}
               </p>
-              <p className="text-xs text-gray-500" style={{ fontFamily: 'serif' }}>
+              <p className="text-xs" style={{ fontFamily: 'serif', color: '#6b7280' }}>
                 Transaction: {transactionHash.slice(0, 16)}...{transactionHash.slice(-12)}
               </p>
             </div>
 
             {/* QR Code Section */}
             <div className="mt-16 mb-8 flex justify-center">
-              <div className="bg-white p-4 border-2 border-gray-400 inline-block">
+              <div className="p-4 border-2 inline-block" style={{ backgroundColor: '#ffffff', borderColor: '#9ca3af' }}>
                 <QRCode
                   value={explorerUrl}
                   size={120}
@@ -242,19 +244,19 @@ export default function Certificate({
                 />
               </div>
             </div>
-            <p className="text-xs text-gray-600 mb-12" style={{ fontFamily: 'serif' }}>
+            <p className="text-xs mb-12" style={{ fontFamily: 'serif', color: '#4b5563' }}>
               Scan QR code to verify on Stellar Explorer
             </p>
 
             {/* Signature Lines */}
-            <div className="flex justify-between mt-16 pt-8 border-t border-gray-400">
+            <div className="flex justify-between mt-16 pt-8 border-t" style={{ borderColor: '#9ca3af' }}>
               <div className="flex-1 text-center">
-                <div className="border-b-2 border-black w-48 mx-auto mb-2"></div>
-                <p className="text-sm text-black" style={{ fontFamily: 'serif' }}>MANAGER</p>
+                <div className="border-b-2 w-48 mx-auto mb-2" style={{ borderColor: '#000000' }}></div>
+                <p className="text-sm" style={{ fontFamily: 'serif', color: '#000000' }}>MANAGER</p>
               </div>
               <div className="flex-1 text-center">
-                <div className="border-b-2 border-black w-48 mx-auto mb-2"></div>
-                <p className="text-sm text-black" style={{ fontFamily: 'serif' }}>CEO</p>
+                <div className="border-b-2 w-48 mx-auto mb-2" style={{ borderColor: '#000000' }}></div>
+                <p className="text-sm" style={{ fontFamily: 'serif', color: '#000000' }}>CEO</p>
               </div>
             </div>
           </div>
