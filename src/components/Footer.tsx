@@ -19,10 +19,10 @@ export default function Footer() {
                         Verifiable skill credentials for an AI-generated world. Built with trust on Stellar.
                     </p>
                     <div className="flex gap-4">
-                        <Link href="https://github.com" target="_blank" className="hover:text-purple-600 transition bg-white p-2 rounded-full shadow-sm border border-slate-200">
+                        <Link href="https://github.com/Sov-ereign/PresentX" target="_blank" className="hover:text-purple-600 transition bg-white p-2 rounded-full shadow-sm border border-slate-200">
                             <Github className="w-5 h-5" />
                         </Link>
-                        <Link href="https://twitter.com" target="_blank" className="hover:text-purple-600 transition bg-white p-2 rounded-full shadow-sm border border-slate-200">
+                        <Link href="https://twitter.com/_Sov_ereign" target="_blank" className="hover:text-purple-600 transition bg-white p-2 rounded-full shadow-sm border border-slate-200">
                             <Twitter className="w-5 h-5" />
                         </Link>
                     </div>
@@ -41,17 +41,17 @@ export default function Footer() {
                 <div>
                     <h4 className="text-slate-900 font-bold mb-6 text-sm uppercase tracking-wider">Resources</h4>
                     <ul className="space-y-4 text-sm font-medium">
-                        <li><Link href="/#how-it-works" className="hover:text-purple-600 transition">Documentation</Link></li>
-                        <li><Link href="#" className="hover:text-purple-600 transition">GitHub Repo</Link></li>
-                        <li><Link href="#" className="hover:text-purple-600 transition">Smart Contract</Link></li>
+                        <li><Link href="/docs" className="hover:text-purple-600 transition">Documentation</Link></li>
+                        <li><Link href="https://github.com/Sov-ereign/PresentX" target="_blank" className="hover:text-purple-600 transition">GitHub Repo</Link></li>
+                        <li><Link href="/smart-contract" className="hover:text-purple-600 transition">Smart Contract</Link></li>
                     </ul>
                 </div>
 
                 <div>
                     <h4 className="text-slate-900 font-bold mb-6 text-sm uppercase tracking-wider">Legal</h4>
                     <ul className="space-y-4 text-sm font-medium">
-                        <li><Link href="#" className="hover:text-purple-600 transition">Privacy Policy</Link></li>
-                        <li><Link href="#" className="hover:text-purple-600 transition">Terms of Service</Link></li>
+                        <li><Link href="/privacy" className="hover:text-purple-600 transition">Privacy Policy</Link></li>
+                        <li><Link href="/terms" className="hover:text-purple-600 transition">Terms of Service</Link></li>
                     </ul>
                 </div>
             </div>
