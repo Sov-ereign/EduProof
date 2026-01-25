@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Play, CheckCircle, XCircle, Loader2, AlertCircle, Sparkles, ChevronRight, Video, VideoOff, Shield, AlertTriangle } from "lucide-react";
+import { Play, CheckCircle, XCircle, Loader2, AlertCircle, Sparkles, ChevronRight, Shield, AlertTriangle } from "lucide-react";
 import { useAntiCheat } from "@/hooks/useAntiCheat";
 import Editor from "react-simple-code-editor";
 import { highlight, languages } from "prismjs";
@@ -31,17 +31,18 @@ interface CodeEditorProps {
     onComplete: (passed: boolean) => void;
     onNext?: () => void;
     isLastChallenge?: boolean;
+    isProcessingNext?: boolean; // Disable Next button during processing
 }
 
-export default function CodeEditor({ challenge, language, onComplete, onNext, isLastChallenge = false }: CodeEditorProps) {
+export default function CodeEditor({ challenge, language, onComplete, onNext, isLastChallenge = false, isProcessingNext = false }: CodeEditorProps) {
     const [code, setCode] = useState(challenge.starterCode || challenge.functionSignature + "\n    pass");
     const [validating, setValidating] = useState(false);
     const [validationResult, setValidationResult] = useState<any>(null);
     const [submitted, setSubmitted] = useState(false);
     const [showCameraWarning, setShowCameraWarning] = useState(false);
 
-    // Anti-cheat system
-    const { status, start, stop, videoRef, isBlocked } = useAntiCheat({
+    // Anti-cheat system (tab monitoring only, no camera for coding challenges)
+    const { status, start, stop, isBlocked } = useAntiCheat({
         onViolation: (type) => {
             console.warn(`Anti-cheat violation: ${type}`);
         },
@@ -49,8 +50,7 @@ export default function CodeEditor({ challenge, language, onComplete, onNext, is
             setShowCameraWarning(true);
             setTimeout(() => setShowCameraWarning(false), 5000);
         },
-        maxViolations: 3,
-        enableCamera: true
+        maxViolations: 3
     });
 
     // Start anti-cheat when component mounts
@@ -146,14 +146,14 @@ export default function CodeEditor({ challenge, language, onComplete, onNext, is
 
     return (
         <div className="w-full space-y-4">
-            {/* Anti-Cheat Status Bar */}
+            {/* Anti-Cheat Status Bar (Tab Monitoring Only) */}
             <div className="bg-gray-900/50 rounded-xl p-3 border border-gray-800 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <Shield className={`w-5 h-5 ${status.cameraActive && status.tabFocused ? 'text-green-400' : 'text-yellow-400'}`} />
+                    <Shield className={`w-5 h-5 ${status.tabFocused ? 'text-green-400' : 'text-yellow-400'}`} />
                     <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full ${status.cameraActive ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
+                        <div className={`w-2 h-2 rounded-full ${status.tabFocused ? 'bg-green-400 animate-pulse' : 'bg-yellow-400'}`} />
                         <span className="text-xs text-gray-300 font-medium">
-                            {status.cameraActive ? 'Proctoring Active' : 'Camera Required'}
+                            {status.tabFocused ? 'Tab Focused' : 'Tab Switched'}
                         </span>
                     </div>
                     {status.violations > 0 && (
@@ -166,26 +166,11 @@ export default function CodeEditor({ challenge, language, onComplete, onNext, is
                     )}
                 </div>
                 <div className="flex items-center gap-2">
-                    {status.cameraActive ? (
-                        <Video className="w-4 h-4 text-green-400" />
-                    ) : (
-                        <VideoOff className="w-4 h-4 text-red-400" />
-                    )}
                     <span className="text-xs text-gray-400">
                         {status.tabFocused ? 'Focused' : 'Tab Switched'}
                     </span>
                 </div>
             </div>
-
-            {/* Hidden video element for camera */}
-            <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                className="hidden"
-                style={{ width: '1px', height: '1px', position: 'absolute', top: '-9999px' }}
-            />
 
             {/* Warning Banner */}
             {showCameraWarning && status.warnings.length > 0 && (
@@ -201,7 +186,7 @@ export default function CodeEditor({ challenge, language, onComplete, onNext, is
                             {status.warnings[status.warnings.length - 1]}
                         </p>
                         <p className="text-yellow-200/80 text-xs mt-1">
-                            Please maintain focus on the challenge window and keep your camera visible.
+                            Please maintain focus on the challenge window.
                         </p>
                     </div>
                 </motion.div>
@@ -355,10 +340,10 @@ export default function CodeEditor({ challenge, language, onComplete, onNext, is
                         onClick={handleRun}
                         disabled={validating || (submitted && canProceed)}
                         className={`px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition ${validating
-                                ? "bg-gray-700 text-gray-400 cursor-not-allowed"
-                                : submitted && canProceed
-                                    ? "bg-green-600 text-white cursor-not-allowed"
-                                    : "bg-gradient-to-r from-purple-600 to-indigo-600 hover:opacity-90 text-white"
+                            ? "bg-gray-700 text-gray-400 cursor-not-allowed"
+                            : submitted && canProceed
+                                ? "bg-green-600 text-white cursor-not-allowed"
+                                : "bg-gradient-to-r from-purple-600 to-indigo-600 hover:opacity-90 text-white"
                             }`}
                     >
                         {validating ? (
@@ -398,10 +383,10 @@ export default function CodeEditor({ challenge, language, onComplete, onNext, is
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     onClick={() => onNext && onNext()}
-                    disabled={!onNext}
-                    className={`w-full px-6 py-3 rounded-xl font-bold transition flex items-center justify-center gap-2 ${onNext
-                            ? "bg-gradient-to-r from-green-600 to-emerald-600 hover:opacity-90 text-white"
-                            : "bg-gray-700 text-gray-400 cursor-not-allowed"
+                    disabled={!onNext || isProcessingNext}
+                    className={`w-full px-6 py-3 rounded-xl font-bold transition flex items-center justify-center gap-2 ${onNext && !isProcessingNext
+                        ? "bg-gradient-to-r from-green-600 to-emerald-600 hover:opacity-90 text-white"
+                        : "bg-gray-700 text-gray-400 cursor-not-allowed"
                         }`}
                 >
                     {isLastChallenge ? (

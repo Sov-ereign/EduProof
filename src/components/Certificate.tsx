@@ -44,6 +44,19 @@ export default function Certificate({
         logging: false,
         allowTaint: true,
         removeContainer: false,
+        onclone: (clonedDoc) => {
+          // Fix lab() color function issues by converting to standard colors
+          const clonedElement = clonedDoc.querySelector('.certificate-container');
+          if (clonedElement) {
+            // Force all elements to use standard color formats
+            clonedElement.querySelectorAll('*').forEach((el: any) => {
+              const styles = window.getComputedStyle(el);
+              if (styles.color) el.style.color = styles.color;
+              if (styles.backgroundColor) el.style.backgroundColor = styles.backgroundColor;
+              if (styles.borderColor) el.style.borderColor = styles.borderColor;
+            });
+          }
+        }
       });
 
       const imgData = canvas.toDataURL("image/png", 1.0);
@@ -78,6 +91,17 @@ export default function Certificate({
         logging: false,
         allowTaint: true,
         removeContainer: false,
+        onclone: (clonedDoc) => {
+          const clonedElement = clonedDoc.querySelector('.certificate-container');
+          if (clonedElement) {
+            clonedElement.querySelectorAll('*').forEach((el: any) => {
+              const styles = window.getComputedStyle(el);
+              if (styles.color) el.style.color = styles.color;
+              if (styles.backgroundColor) el.style.backgroundColor = styles.backgroundColor;
+              if (styles.borderColor) el.style.borderColor = styles.borderColor;
+            });
+          }
+        }
       });
 
       const link = document.createElement("a");

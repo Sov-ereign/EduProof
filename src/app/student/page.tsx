@@ -167,6 +167,45 @@ export default function StudentDashboard() {
 
             // Store repo analysis and show test flow
             setRepoAnalysis(data.repoAnalysis);
+
+            // Validate that primary language matches selected skill
+            const languages = data.repoAnalysis.languages || {};
+            const totalBytes = Object.values(languages).reduce((a: any, b: any) => a + b, 0) as number;
+
+            if (totalBytes > 0) {
+                const languagePercentages = Object.entries(languages).map(([lang, bytes]: any) => ({
+                    lang,
+                    percentage: (bytes / totalBytes) * 100
+                })).sort((a, b) => b.percentage - a.percentage);
+
+                const primaryLanguage = languagePercentages[0]?.lang.toLowerCase() || '';
+                const selectedSkillNormalized = selectedSkill.toLowerCase();
+
+                // Language mapping - what languages are acceptable for each skill
+                const languageMap: Record<string, string[]> = {
+                    'python': ['python'],
+                    'javascript': ['javascript'],
+                    'typescript': ['typescript', 'javascript'],
+                    'react': ['javascript', 'typescript', 'jsx', 'tsx'],
+                    'rust': ['rust']
+                };
+
+                const acceptedLanguages = languageMap[selectedSkillNormalized] || [selectedSkillNormalized];
+
+                // Check if primary language matches any accepted language
+                const isLanguageMatch = acceptedLanguages.some(lang =>
+                    primaryLanguage.includes(lang.toLowerCase())
+                );
+
+                if (!isLanguageMatch) {
+                    setError(`Repository's primary language is ${languagePercentages[0]?.lang}, but you selected ${selectedSkill}. Please choose a repository that primarily uses ${selectedSkill}.`);
+                    setAnalyzing(false);
+                    setRepoAnalysis(null);
+                    setTestReady(false);
+                    return;
+                }
+            }
+
             setTestReady(true);
         } catch (e: any) {
             console.error(e);
@@ -1006,8 +1045,8 @@ function EvaluationResults({
                 whileHover={!minting && result.score >= 70 ? { y: -1 } : {}}
                 whileTap={!minting && result.score >= 70 ? { scale: 0.98 } : {}}
                 className={`w-full py-5 rounded-2xl font-black text-xs tracking-[0.3em] text-white shadow-2xl transition-all flex items-center justify-center gap-3 ${result.score < 70
-                        ? "bg-zinc-100 text-zinc-400 cursor-not-allowed border border-zinc-200"
-                        : "bg-zinc-950 hover:bg-zinc-800"
+                    ? "bg-zinc-100 text-zinc-400 cursor-not-allowed border border-zinc-200"
+                    : "bg-zinc-950 hover:bg-zinc-800"
                     }`}
             >
                 {minting ? (

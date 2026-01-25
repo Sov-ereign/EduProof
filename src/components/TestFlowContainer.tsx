@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, CheckCircle, Code, FileQuestion, Award, BarChart3, FileCode, TrendingUp, ExternalLink, Sparkles, XCircle } from "lucide-react";
 import MCQTest, { type MCQQuestion } from "./MCQTest";
@@ -33,10 +33,13 @@ export default function TestFlowContainer({ repoAnalysis, skill, onComplete }: T
     const [codingChallenges, setCodingChallenges] = useState<CodingChallenge[]>([]);
     const [currentChallengeIndex, setCurrentChallengeIndex] = useState(0);
     const [challengeResults, setChallengeResults] = useState<boolean[]>([]);
+    const challengeResultsRef = useRef<boolean[]>([]);
+    const processingNextRef = useRef<boolean>(false); // Prevent multiple clicks
     const [mcqScore, setMcqScore] = useState<number | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [generatingReport, setGeneratingReport] = useState(false);
+    const [isProcessingNext, setIsProcessingNext] = useState(false); // State-based flag for Next button
     const [mcqCorrectCount, setMcqCorrectCount] = useState<number>(0);
     const [mcqGenerated, setMcqGenerated] = useState(false);
     const [finalScoreBreakdown, setFinalScoreBreakdown] = useState<any>(null);
@@ -111,7 +114,8 @@ export default function TestFlowContainer({ repoAnalysis, skill, onComplete }: T
             setCodingChallenges(data.challenges || []);
             setPhase("coding");
             setCurrentChallengeIndex(0);
-            setChallengeResults([]);
+            setChallengeResults(new Array(data.challenges?.length || 0).fill(false));
+            challengeResultsRef.current = new Array(data.challenges?.length || 0).fill(false);
         } catch (e: any) {
             console.error("Error generating coding challenges:", e);
             setError(e.message || "Failed to generate coding challenges");
@@ -121,124 +125,187 @@ export default function TestFlowContainer({ repoAnalysis, skill, onComplete }: T
     };
 
     const handleChallengeComplete = (passed: boolean) => {
-        const newResults = [...challengeResults];
+        console.log('🎯 handleChallengeComplete called:', {
+            currentChallengeIndex,
+            passed,
+            currentResults: challengeResults,
+            currentResultsRef: challengeResultsRef.current
+        });
+
+        // Update ref FIRST (synchronous) to ensure it's available immediately
+        const newResults = [...challengeResultsRef.current.length > 0 ? challengeResultsRef.current : challengeResults];
         newResults[currentChallengeIndex] = passed;
-        setChallengeResults(newResults);
+        challengeResultsRef.current = newResults; // Update ref immediately (synchronous)
+        setChallengeResults(newResults); // Update state (asynchronous, but ref is already updated)
+
+        console.log('✅ Updated results:', {
+            newResults,
+            refValue: challengeResultsRef.current,
+            currentIndex: currentChallengeIndex
+        });
 
         // Don't auto-advance, let user click Next
     };
 
     const handleChallengeNext = async () => {
-        if (currentChallengeIndex < codingChallenges.length - 1) {
-            // Move to next challenge instantly
-            setCurrentChallengeIndex(currentChallengeIndex + 1);
-        } else {
-            // All challenges completed, calculate final score with new breakdown
-            setGeneratingReport(true);
-            setLoading(true);
-            
-            try {
-                // Import analysis functions
-                const { analyzeCodeReadability, analyzeRepoQuality } = await import('@/lib/repo-analyzer');
-                
-                // Calculate MCQ + Coding score (80 points combined) FIRST
-                const mcqPercentage = mcqScore || 0;
-                const codingPassed = challengeResults.filter(r => r).length;
-                const codingTotal = codingChallenges.length;
-                const codingPercentage = codingTotal > 0 ? (codingPassed / codingTotal) * 100 : 0;
-                
-                // Combined MCQ + Coding: 80 points
-                // Split: MCQ 40 points, Coding 40 points
-                const mcqContribution = (mcqPercentage / 100) * 40;
-                const codingContribution = (codingPercentage / 100) * 40;
-                const testScore = mcqContribution + codingContribution;
-                
-                // Debug logging
-                console.log('📊 Score Calculation Debug:', {
-                    mcqPercentage,
-                    mcqContribution,
-                    codingPercentage,
-                    codingContribution,
-                    testScore,
-                    filesCount: repoAnalysis.files?.length || 0
-                });
-                
-                // Calculate code readability score (10 points)
-                const readability = analyzeCodeReadability(repoAnalysis.files || []);
-                setCodeReadability(readability);
-                
-                // Calculate repo quality score (10 points)
-                const quality = analyzeRepoQuality(repoAnalysis.readme, repoAnalysis.repositoryInfo);
-                setRepoQuality(quality);
-                
-                // Code Readability: 10 points
-                const readabilityScore = readability.score;
-                
-                // Repo Quality: 10 points
-                const qualityScore = quality.score;
-                
-                // Debug logging
-                console.log('📊 Final Score Breakdown:', {
-                    testScore,
-                    readabilityScore,
-                    qualityScore,
-                    total: testScore + readabilityScore + qualityScore
-                });
-                
-                // Final score
-                const finalScore = Math.round(testScore + readabilityScore + qualityScore);
-                
-                // Create breakdown
-                const breakdown = {
-                    test: {
-                        mcq: {
-                            score: mcqPercentage,
-                            correct: mcqCorrectCount,
-                            total: mcqQuestions.length,
-                            contribution: mcqContribution,
-                            maxPoints: 40
-                        },
-                        coding: {
-                            score: codingPercentage,
-                            passed: codingPassed,
-                            total: codingTotal,
-                            allPassed: codingPassed === codingTotal,
-                            contribution: codingContribution,
-                            maxPoints: 40
-                        },
-                        total: testScore,
-                        maxPoints: 80
-                    },
-                    readability: {
-                        score: readabilityScore,
-                        maxPoints: 10,
-                        ratio: readability.ratio,
-                        codeLines: readability.codeLines,
-                        commentLines: readability.commentLines,
-                        feedback: readability.feedback
-                    },
-                    repoQuality: {
-                        score: qualityScore,
-                        maxPoints: 10,
-                        feedback: quality.feedback
-                    },
-                    final: finalScore
-                };
-                
-                setFinalScoreBreakdown(breakdown);
-                
-                // Small delay for better UX
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                
-                setPhase("completed");
-                onComplete(finalScore);
-            } catch (error: any) {
-                console.error("Error calculating final score:", error);
-                setError(error.message || "Failed to generate final report");
-            } finally {
-                setLoading(false);
-                setGeneratingReport(false);
+        // CRITICAL: Use REF for synchronous check (prevents race conditions)
+        if (processingNextRef.current) {
+            console.warn('⚠️ handleChallengeNext already processing, ignoring duplicate call');
+            return;
+        }
+
+        // Set ref immediately (synchronous) to block concurrent calls
+        processingNextRef.current = true;
+        setIsProcessingNext(true);
+
+        console.log('⏭️ handleChallengeNext called:', {
+            currentChallengeIndex,
+            totalChallenges: codingChallenges.length,
+            challengeResults,
+            challengeResultsRef: challengeResultsRef.current,
+            isProcessing: processingNextRef.current
+        });
+
+        try {
+            // Ensure current challenge result is saved (use ref which is always up-to-date)
+            const currentResult = challengeResultsRef.current[currentChallengeIndex];
+            if (currentResult === undefined) {
+                console.warn('⚠️ Current challenge result not saved yet, waiting...');
+                // Wait a bit for the result to be saved
+                await new Promise(resolve => setTimeout(resolve, 100));
             }
+
+            if (currentChallengeIndex < codingChallenges.length - 1) {
+                // Move to next challenge
+                setCurrentChallengeIndex(currentChallengeIndex + 1);
+                // Reset flags after UI updates
+                setTimeout(() => {
+                    processingNextRef.current = false;
+                    setIsProcessingNext(false);
+                }, 200);
+            } else {
+                // All challenges completed, calculate final score with new breakdown
+                setGeneratingReport(true);
+                setLoading(true);
+
+                try {
+                    // Import analysis functions
+                    const { analyzeCodeReadability, analyzeRepoQuality } = await import('@/lib/repo-analyzer');
+
+                    // Calculate MCQ + Coding score (80 points combined) FIRST
+                    const mcqPercentage = mcqScore || 0;
+
+                    // CRITICAL FIX: Use ref to get the latest challengeResults (fixes race condition)
+                    const latestResults = challengeResultsRef.current;
+
+                    // NEW: Score based on test cases passed in the single challenge, not number of challenges
+                    // There's only 1 challenge, so check if it passed (all test cases passed)
+                    const challengePassed = latestResults[0] === true;
+                    const codingPercentage = challengePassed ? 100 : 0; // Either 100% or 0%
+
+                    // Combined MCQ + Coding: 80 points
+                    // Split: MCQ 40 points, Coding 40 points
+                    const mcqContribution = (mcqPercentage / 100) * 40;
+                    const codingContribution = (codingPercentage / 100) * 40;
+                    const testScore = mcqContribution + codingContribution;
+
+                    // Debug logging
+                    console.log('📊 Score Calculation Debug:', {
+                        mcqPercentage,
+                        mcqContribution,
+                        challengePassed,
+                        codingPercentage,
+                        codingContribution,
+                        testScore,
+                        filesCount: repoAnalysis.files?.length || 0,
+                        challengeResults: latestResults
+                    });
+
+                    // Calculate code readability score (10 points)
+                    const readability = analyzeCodeReadability(repoAnalysis.files || []);
+                    setCodeReadability(readability);
+
+                    // Calculate repo quality score (10 points)
+                    const quality = analyzeRepoQuality(repoAnalysis.readme, repoAnalysis.repositoryInfo);
+                    setRepoQuality(quality);
+
+                    // Code Readability: 10 points
+                    const readabilityScore = readability.score;
+
+                    // Repo Quality: 10 points
+                    const qualityScore = quality.score;
+
+                    // Debug logging
+                    console.log('📊 Final Score Breakdown:', {
+                        testScore,
+                        readabilityScore,
+                        qualityScore,
+                        total: testScore + readabilityScore + qualityScore
+                    });
+
+                    // Final score
+                    const finalScore = Math.round(testScore + readabilityScore + qualityScore);
+
+                    // Create breakdown
+                    const breakdown = {
+                        test: {
+                            mcq: {
+                                score: mcqPercentage,
+                                correct: mcqCorrectCount,
+                                total: mcqQuestions.length,
+                                contribution: mcqContribution,
+                                maxPoints: 40
+                            },
+                            coding: {
+                                passed: challengePassed,
+                                total: 1, // Only 1 challenge now
+                                percentage: codingPercentage,
+                                contribution: codingContribution,
+                                maxPoints: 40
+                            },
+                            total: testScore,
+                            maxPoints: 80
+                        },
+                        readability: {
+                            score: readabilityScore,
+                            maxPoints: 10,
+                            ratio: readability.ratio,
+                            codeLines: readability.codeLines,
+                            commentLines: readability.commentLines,
+                            feedback: readability.feedback
+                        },
+                        repoQuality: {
+                            score: qualityScore,
+                            maxPoints: 10,
+                            feedback: quality.feedback
+                        },
+                        final: finalScore
+                    };
+
+                    setFinalScoreBreakdown(breakdown);
+
+                    // Small delay for better UX
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+
+                    // Pass data to completion handler
+                    console.log('✅ Calling onComplete with final score:', finalScore);
+                    onComplete(finalScore);
+                } catch (error: any) {
+                    console.error('❌ Error in final score calculation:', error);
+                    setError(error.message || 'Failed to calculate final score');
+                    setIsProcessingNext(false); // Reset on error
+                } finally {
+                    setLoading(false);
+                    setGeneratingReport(false);
+                    processingNextRef.current = false; // Reset ref
+                    setIsProcessingNext(false); // Reset state
+                }
+            }
+        } catch (error: any) {
+            console.error("Error in handleChallengeNext:", error);
+            // Reset flags on error
+            processingNextRef.current = false;
+            setIsProcessingNext(false);
         }
     };
 
@@ -349,8 +416,8 @@ export default function TestFlowContainer({ repoAnalysis, skill, onComplete }: T
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
                     <div className="flex items-center gap-6">
                         <div className={`flex items-center gap-3 transition-all duration-500 ${phase === "mcq" || phase === "coding" || phase === "completed"
-                                ? "text-purple-600 scale-105"
-                                : "text-slate-400 grayscale"
+                            ? "text-purple-600 scale-105"
+                            : "text-slate-400 grayscale"
                             }`}>
                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${phase === "mcq" ? "bg-purple-600 text-white shadow-lg shadow-purple-200" : "bg-slate-100"
                                 }`}>
@@ -370,8 +437,8 @@ export default function TestFlowContainer({ repoAnalysis, skill, onComplete }: T
                         <div className="hidden sm:block w-12 h-px bg-slate-200" />
 
                         <div className={`flex items-center gap-3 transition-all duration-500 ${phase === "coding" || phase === "completed"
-                                ? "text-indigo-600 scale-105"
-                                : "text-slate-400 grayscale"
+                            ? "text-indigo-600 scale-105"
+                            : "text-slate-400 grayscale"
                             }`}>
                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${phase === "coding" ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200" : "bg-slate-100"
                                 }`}>
@@ -433,10 +500,10 @@ export default function TestFlowContainer({ repoAnalysis, skill, onComplete }: T
                                     <div
                                         key={idx}
                                         className={`w-3 h-3 rounded-full ${idx < currentChallengeIndex
-                                                ? "bg-green-500"
-                                                : idx === currentChallengeIndex
-                                                    ? "bg-purple-500"
-                                                    : "bg-gray-700"
+                                            ? "bg-green-500"
+                                            : idx === currentChallengeIndex
+                                                ? "bg-purple-500"
+                                                : "bg-gray-700"
                                             }`}
                                     />
                                 ))}
@@ -448,6 +515,7 @@ export default function TestFlowContainer({ repoAnalysis, skill, onComplete }: T
                             onComplete={handleChallengeComplete}
                             onNext={handleChallengeNext}
                             isLastChallenge={currentChallengeIndex === codingChallenges.length - 1}
+                            isProcessingNext={isProcessingNext}
                         />
                     </motion.div>
                 )}
@@ -480,8 +548,8 @@ export default function TestFlowContainer({ repoAnalysis, skill, onComplete }: T
                                 <p className="text-xs text-gray-400 mt-2">
                                     {finalScoreBreakdown ? (
                                         <>
-                                            Tests: {Math.round(finalScoreBreakdown.test.total)}/80 + 
-                                            Readability: {Math.round(finalScoreBreakdown.readability.score)}/10 + 
+                                            Tests: {Math.round(finalScoreBreakdown.test.total)}/80 +
+                                            Readability: {Math.round(finalScoreBreakdown.readability.score)}/10 +
                                             Repo Quality: {Math.round(finalScoreBreakdown.repoQuality.score)}/10
                                         </>
                                     ) : (
@@ -490,6 +558,120 @@ export default function TestFlowContainer({ repoAnalysis, skill, onComplete }: T
                                 </p>
                             </div>
                         </div>
+
+                        {/* Detailed Score Breakdown Cards */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                            {/* MCQ Score Detail */}
+                            <div className="bg-gradient-to-br from-blue-500/10 to-indigo-500/10 rounded-2xl p-6 border border-blue-500/30">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <FileQuestion className="w-6 h-6 text-blue-400" />
+                                    <h4 className="text-xl font-bold text-white">MCQ Assessment</h4>
+                                </div>
+                                <div className="space-y-3">
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-300">Questions Correct</span>
+                                        <span className="text-white font-bold">
+                                            {finalScoreBreakdown?.test.mcq.correct}/{finalScoreBreakdown?.test.mcq.total}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-300">Accuracy</span>
+                                        <span className="text-white font-bold">
+                                            {finalScoreBreakdown?.test.mcq.score.toFixed(1)}%
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between items-center pt-3 border-t border-gray-700">
+                                        <span className="text-gray-300">Points Earned</span>
+                                        <span className="text-2xl font-black text-blue-400">
+                                            {finalScoreBreakdown?.test.mcq.contribution.toFixed(1)}/40
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Coding Challenge Detail */}
+                            <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-2xl p-6 border border-purple-500/30">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <Code className="w-6 h-6 text-purple-400" />
+                                    <h4 className="text-xl font-bold text-white">Coding Challenge</h4>
+                                </div>
+                                <div className="space-y-3">
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-300">Status</span>
+                                        <span className={`font-bold ${finalScoreBreakdown?.test.coding.passed ? 'text-green-400' : 'text-red-400'}`}>
+                                            {finalScoreBreakdown?.test.coding.passed ? 'All Tests Passed ✓' : 'Failed'}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-300">Success Rate</span>
+                                        <span className="text-white font-bold">
+                                            {finalScoreBreakdown?.test.coding.percentage?.toFixed(1) || 0}%
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between items-center pt-3 border-t border-gray-700">
+                                        <span className="text-gray-300">Points Earned</span>
+                                        <span className="text-2xl font-black text-purple-400">
+                                            {finalScoreBreakdown?.test.coding.contribution.toFixed(1)}/40
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Code Quality Detail */}
+                            <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-2xl p-6 border border-green-500/30">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <FileCode className="w-6 h-6 text-green-400" />
+                                    <h4 className="text-xl font-bold text-white">Code Readability</h4>
+                                </div>
+                                <div className="space-y-3">
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-300">Comment Ratio</span>
+                                        <span className="text-white font-bold">
+                                            {codeReadability?.ratio.toFixed(1)}%
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-300">Code Lines</span>
+                                        <span className="text-white font-bold">{codeReadability?.codeLines}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center pt-3 border-t border-gray-700">
+                                        <span className="text-gray-300">Points Earned</span>
+                                        <span className="text-2xl font-black text-green-400">
+                                            {codeReadability?.score.toFixed(1)}/10
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Repository Quality Detail */}
+                            <div className="bg-gradient-to-br from-orange-500/10 to-amber-500/10 rounded-2xl p-6 border border-orange-500/30">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <TrendingUp className="w-6 h-6 text-orange-400" />
+                                    <h4 className="text-xl font-bold text-white">Repository Quality</h4>
+                                </div>
+                                <div className="space-y-3">
+                                    {repoAnalysis.repositoryInfo && (
+                                        <>
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-300">Stars</span>
+                                                <span className="text-white font-bold">{repoAnalysis.repositoryInfo.stars || 0}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-300">Forks</span>
+                                                <span className="text-white font-bold">{repoAnalysis.repositoryInfo.forks || 0}</span>
+                                            </div>
+                                        </>
+                                    )}
+                                    <div className="flex justify-between items-center pt-3 border-t border-gray-700">
+                                        <span className="text-gray-300">Points Earned</span>
+                                        <span className="text-2xl font-black text-orange-400">
+                                            {repoQuality?.score.toFixed(1)}/10
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
 
                         {/* Comprehensive Analysis Report */}
                         <div className="bg-gray-900/50 rounded-2xl p-6 border border-gray-800">
@@ -717,8 +899,8 @@ export default function TestFlowContainer({ repoAnalysis, skill, onComplete }: T
                                             <span className="text-white font-bold">Overall Performance: </span>
                                             <span className="text-gray-300">
                                                 Final score: {finalScoreBreakdown ? finalScoreBreakdown.final : 0}/100.
-                                                Breakdown: Tests {finalScoreBreakdown ? Math.round(finalScoreBreakdown.test.total) : 0}/80, 
-                                                Readability {codeReadability ? Math.round(codeReadability.score) : 0}/10, 
+                                                Breakdown: Tests {finalScoreBreakdown ? Math.round(finalScoreBreakdown.test.total) : 0}/80,
+                                                Readability {codeReadability ? Math.round(codeReadability.score) : 0}/10,
                                                 Repo Quality {repoQuality ? Math.round(repoQuality.score) : 0}/10.
                                                 {finalScoreBreakdown && finalScoreBreakdown.final >= 70 ? " Excellent performance across all assessment criteria." : " Good effort with room for improvement in certain areas."}
                                             </span>
@@ -830,4 +1012,5 @@ export default function TestFlowContainer({ repoAnalysis, skill, onComplete }: T
         </div>
     );
 }
+
 
