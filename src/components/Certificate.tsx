@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import QRCode from "react-qr-code";
-import html2canvas from "html2canvas";
+import { toPng } from "html-to-image";
 import jsPDF from "jspdf";
 import { Download, X, ShieldCheck } from "lucide-react";
 import { motion } from "framer-motion";
@@ -34,42 +34,26 @@ export default function Certificate({
     if (!certificateRef.current) return;
 
     try {
-      // Wait a bit for any animations to complete
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      const canvas = await html2canvas(certificateRef.current, {
-        scale: 2,
-        backgroundColor: "#ffffff",
-        useCORS: true,
-        logging: false,
-        allowTaint: true,
-        removeContainer: false,
-        onclone: (clonedDoc) => {
-          // Fix lab() color function issues by converting to standard colors
-          const clonedElement = clonedDoc.querySelector('.certificate-container');
-          if (clonedElement) {
-            // Force all elements to use standard color formats
-            clonedElement.querySelectorAll('*').forEach((el: any) => {
-              const styles = window.getComputedStyle(el);
-              if (styles.color) el.style.color = styles.color;
-              if (styles.backgroundColor) el.style.backgroundColor = styles.backgroundColor;
-              if (styles.borderColor) el.style.borderColor = styles.borderColor;
-            });
-          }
-        }
+      const dataUrl = await toPng(certificateRef.current, {
+        quality: 1.0,
+        pixelRatio: 2,
       });
 
-      const imgData = canvas.toDataURL("image/png", 1.0);
       const pdf = new jsPDF("portrait", "mm", "a4");
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
+
+      const img = new Image();
+      img.src = dataUrl;
+      await new Promise((resolve) => { img.onload = resolve; });
+
+      const imgWidth = img.width;
+      const imgHeight = img.height;
       const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
       const imgX = (pdfWidth - imgWidth * ratio) / 2;
       const imgY = (pdfHeight - imgHeight * ratio) / 2;
 
-      pdf.addImage(imgData, "PNG", imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+      pdf.addImage(dataUrl, "PNG", imgX, imgY, imgWidth * ratio, imgHeight * ratio);
       pdf.save(`EduProof_Certificate_${skill}_${userName.replace(/\s+/g, "_")}.pdf`);
     } catch (error) {
       console.error("Error generating PDF:", error);
@@ -81,32 +65,14 @@ export default function Certificate({
     if (!certificateRef.current) return;
 
     try {
-      // Wait a bit for any animations to complete
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      const canvas = await html2canvas(certificateRef.current, {
-        scale: 2,
-        backgroundColor: "#ffffff",
-        useCORS: true,
-        logging: false,
-        allowTaint: true,
-        removeContainer: false,
-        onclone: (clonedDoc) => {
-          const clonedElement = clonedDoc.querySelector('.certificate-container');
-          if (clonedElement) {
-            clonedElement.querySelectorAll('*').forEach((el: any) => {
-              const styles = window.getComputedStyle(el);
-              if (styles.color) el.style.color = styles.color;
-              if (styles.backgroundColor) el.style.backgroundColor = styles.backgroundColor;
-              if (styles.borderColor) el.style.borderColor = styles.borderColor;
-            });
-          }
-        }
+      const dataUrl = await toPng(certificateRef.current, {
+        quality: 1.0,
+        pixelRatio: 2,
       });
 
       const link = document.createElement("a");
       link.download = `EduProof_Certificate_${skill}_${userName.replace(/\s+/g, "_")}.png`;
-      link.href = canvas.toDataURL("image/png", 1.0);
+      link.href = dataUrl;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -134,7 +100,7 @@ export default function Certificate({
         {/* Certificate - Elegant Design */}
         <div
           ref={certificateRef}
-          className="relative p-12 md:p-20"
+          className="certificate-container relative p-12 md:p-20"
           style={{
             backgroundColor: '#ffffff',
             backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cpattern id='marble' x='0' y='0' width='100' height='100' patternUnits='userSpaceOnUse'%3E%3Crect fill='%23ffffff' width='100' height='100'/%3E%3Cpath d='M0 50 Q25 30 50 50 T100 50' stroke='%23f1f5f9' fill='none' stroke-width='0.5' opacity='0.5'/%3E%3Cpath d='M0 30 Q20 20 40 30 T80 30' stroke='%23f8fafc' fill='none' stroke-width='0.3' opacity='0.3'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='100' height='100' fill='url(%23marble)'/%3E%3C/svg%3E")`,

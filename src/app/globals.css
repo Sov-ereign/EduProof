@@ -87,6 +87,41 @@ body {
   }
 }
 
+/* Print styles for certificate download */
+@media print {
+
+  /* Hide everything except certificate */
+  body>*:not(.certificate-modal) {
+    display: none !important;
+  }
+
+  /* Show only certificate */
+  .certificate-container {
+    display: block !important;
+    position: relative !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Hide buttons in print */
+  button {
+    display: none !important;
+  }
+
+  /* Ensure proper page size */
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+
+  /* Reset any transforms or animations */
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+
 .animate-reveal {
   animation: reveal 0.8s cubic-bezier(0.16, 1, 0.3, 1);
 }

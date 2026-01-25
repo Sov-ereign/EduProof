@@ -290,9 +290,19 @@ export default function VerifierDashboard() {
 
                     <div className="flex items-center gap-4 bg-white p-2 rounded-2xl border border-zinc-200 shadow-sm">
                         <div className="flex items-center gap-3 px-4 py-2">
-                            <div className="w-8 h-8 bg-zinc-100 rounded-full flex items-center justify-center border border-zinc-200">
-                                <User className="w-4 h-4 text-zinc-400" />
-                            </div>
+                            {/* GitHub Profile Picture */}
+                            {session.user?.image && (
+                                <img
+                                    src={session.user.image}
+                                    alt="Profile"
+                                    className="w-8 h-8 rounded-full border-2 border-zinc-200"
+                                />
+                            )}
+                            {!session.user?.image && (
+                                <div className="w-8 h-8 bg-zinc-100 rounded-full flex items-center justify-center border border-zinc-200">
+                                    <User className="w-4 h-4 text-zinc-400" />
+                                </div>
+                            )}
                             <div className="text-left">
                                 <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest leading-none">Verifier</p>
                                 <p className="text-xs font-bold text-zinc-900">{session.user?.name}</p>
@@ -607,7 +617,7 @@ export default function VerifierDashboard() {
                                                             <button
                                                                 onClick={() => {
                                                                     setCertificateData({
-                                                                        userName: result.address.slice(0, 10) + "...",
+                                                                        userName: cred.userName || result.address.slice(0, 10) + "...",
                                                                         skill: cred.skill,
                                                                         level: cred.level,
                                                                         score: cred.score,

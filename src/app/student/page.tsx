@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle, Upload, Loader2, Github, FileText, Video, Link as LinkIcon, ExternalLink, AlertCircle, X, FileCode, TrendingUp, Award, BarChart3, Wallet, Lock, LogOut, ArrowRight } from "lucide-react";
+import { CheckCircle, Upload, Loader2, Github, FileText, Video, Link as LinkIcon, ExternalLink, AlertCircle, X, FileCode, TrendingUp, Award, BarChart3, Wallet, Lock, LogOut, ArrowRight, User } from "lucide-react";
 import { useSession, signIn, signOut } from "next-auth/react";
 import { connectWallet } from "@/lib/stellar";
 import Certificate from "@/components/Certificate";
@@ -367,22 +367,39 @@ export default function StudentDashboard() {
                                         INITIALIZE WALLET
                                     </motion.button>
                                 ) : (
-                                    <div className="flex items-center gap-4 px-6 py-4 bg-white border border-zinc-200 rounded-2xl shadow-sm">
-                                        <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                                        <span className="font-mono text-xs font-bold text-zinc-900 tracking-wider uppercase">
-                                            {wallet.slice(0, 6)}...{wallet.slice(-4)}
-                                        </span>
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex items-center gap-4 px-6 py-4 bg-white border border-zinc-200 rounded-2xl shadow-sm">
+                                            <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                                            <span className="font-mono text-xs font-bold text-zinc-900 tracking-wider uppercase">
+                                                {wallet.slice(0, 6)}...{wallet.slice(-4)}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-4 bg-white p-2 rounded-2xl border border-zinc-200 shadow-sm">
+                                            <div className="flex items-center gap-3 px-2">
+                                                {/* GitHub Profile Picture */}
+                                                {session.user?.image && (
+                                                    <img
+                                                        src={session.user.image}
+                                                        alt="Profile"
+                                                        className="w-8 h-8 rounded-full border-2 border-zinc-200"
+                                                    />
+                                                )}
+                                                {!session.user?.image && (
+                                                    <div className="w-8 h-8 bg-zinc-100 rounded-full flex items-center justify-center border border-zinc-200">
+                                                        <User className="w-4 h-4 text-zinc-400" />
+                                                    </div>
+                                                )}
+                                                <div className="text-left">
+                                                    <p className="text-[0.6rem] font-black text-zinc-400 uppercase tracking-widest leading-none">Student</p>
+                                                    <p className="text-xs font-bold text-zinc-900 leading-none">{session.user?.name}</p>
+                                                </div>
+                                            </div>
+                                            <button onClick={() => signOut()} className="p-2.5 rounded-xl hover:bg-zinc-100 text-zinc-400 hover:text-red-600 transition-all border border-transparent hover:border-zinc-200">
+                                                <LogOut className="w-4 h-4" />
+                                            </button>
+                                        </div>
                                     </div>
                                 )}
-                                <div className="flex items-center gap-3 pl-4 border-l border-zinc-200 sm:h-12">
-                                    <div className="text-right">
-                                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest leading-none mb-1">Authenticated</p>
-                                        <p className="text-xs font-bold text-zinc-900 leading-none">{session.user?.name}</p>
-                                    </div>
-                                    <button onClick={() => signOut()} className="p-2.5 rounded-xl hover:bg-zinc-100 text-zinc-400 hover:text-red-600 transition-all border border-transparent hover:border-zinc-200">
-                                        <LogOut className="w-4 h-4" />
-                                    </button>
-                                </div>
                             </div>
                         </div>
                     </header>

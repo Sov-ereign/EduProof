@@ -13,13 +13,15 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "EduProof Zero - Skill Credentials That Can't Be Faked",
-  description: "Web3-based system that issues tamper-proof, skill-level credentials backed by real evidence. Verified by AI and stored on Stellar blockchain.",
+  title: "EduProof - Blockchain Skill Verification",
+  description: "Decentralized proof of skills on Stellar blockchain",
 };
 
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
-import PerformanceMonitor from "../components/PerformanceMonitor";
+import ScrollReveal from "@/components/ScrollReveal";
+import RoleChecker from "@/components/RoleChecker";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
+import PerformanceMonitor from "@/components/PerformanceMonitor";
 
 import { Providers } from "@/components/Providers";
 
@@ -34,10 +36,12 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <Providers>
-          <PerformanceMonitor />
-          <Navbar />
-          {children}
-          <Footer />
+          <RoleChecker>
+            <PerformanceMonitor />
+            <Navbar />
+            {children}
+            <Footer />
+          </RoleChecker>
         </Providers>
       </body>
     </html>

@@ -22,6 +22,9 @@ export const authOptions = {
             session.user.displayName = user.name || session.user.name || user.email?.split('@')[0];
             session.user.username = user.email?.split('@')[0] || user.name;
 
+            // Include user roles
+            session.user.roles = user.roles || [];
+
             return session;
         },
     },

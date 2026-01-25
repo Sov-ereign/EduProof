@@ -201,8 +201,9 @@ export async function mintCredential(
 
     // Store data in memo: "EP:Skill:Level:Score:Name"
     // Memo max is 28 bytes, so we need to be careful with length
-    const nameEncoded = userName ? userName.slice(0, 10) : "Student";
-    const memoText = `EP:${skill.slice(0, 6)}:${level.slice(0, 3)}:${score}:${nameEncoded}`.slice(0, 28);
+    // Format: EP:Skil:Lv:Score:LongerName (shortened skill to fit more name)
+    const nameEncoded = userName ? userName.slice(0, 15) : "Student"; // Increased from 10 to 15
+    const memoText = `EP:${skill.slice(0, 4)}:${level.slice(0, 2)}:${score}:${nameEncoded}`.slice(0, 28);
 
 
     let operation;
