@@ -16,7 +16,12 @@ export const authOptions = {
             // Pass the subscription data from the DB user to the session
             session.user.id = user.id;
             session.user.isSubscribed = user.isSubscribed || false;
-            session.user.username = session.user.username || user.name;
+
+            // Use the real name from GitHub (not username)
+            // session.user.name contains the display name from GitHub
+            session.user.displayName = user.name || session.user.name || user.email?.split('@')[0];
+            session.user.username = user.email?.split('@')[0] || user.name;
+
             return session;
         },
     },

@@ -163,7 +163,8 @@ export async function mintCredential(
   level: string,
   evidence: string,
   score: number,
-  category?: string
+  category?: string,
+  userName?: string
 ) {
   try {
     // Validate inputs
@@ -198,9 +199,11 @@ export async function mintCredential(
       nativeToScVal(cat, { type: "string" }),
     ];
 
-    // Store data in memo for easy indexing: "EP:Skill:Level:Score:Category"
-    // Truncate if needed (memo max 28 chars)
-    const memoText = `EP:${skill.slice(0, 8)}:${level.slice(0, 3)}:${score}`.slice(0, 28);
+    // Store data in memo: "EP:Skill:Level:Score:Name"
+    // Memo max is 28 bytes, so we need to be careful with length
+    const nameEncoded = userName ? userName.slice(0, 10) : "Student";
+    const memoText = `EP:${skill.slice(0, 6)}:${level.slice(0, 3)}:${score}:${nameEncoded}`.slice(0, 28);
+
 
     let operation;
     try {
@@ -287,7 +290,8 @@ export async function fetchUserCredentials(userAddress: string) {
       if (record.successful && record.memo_type === "text" && record.memo) {
         if (record.memo.startsWith("EP:")) {
           const parts = record.memo.split(":");
-          // EP:Skill:Level:Score or EP:Skill:Score
+          // New format: EP:Skill:Level:Score:Name
+          // Old format: EP:Skill:Level:Score (backward compatible)
           if (parts.length >= 3) {
             const skill = parts[1];
             const skillKey = `${userAddress}:${skill}`;
@@ -297,13 +301,15 @@ export async function fetchUserCredentials(userAddress: string) {
               seenSkills.add(skillKey);
 
               const level = parts.length >= 4 ? parts[2] : "Verified";
-              const score = parseInt(parts[parts.length - 1]) || 0;
+              const score = parseInt(parts[3]) || 0;
+              const userName = parts.length >= 5 ? parts[4] : undefined;
 
               credentials.push({
                 id: record.hash,
                 skill: skill,
                 level: level,
                 score: score,
+                userName: userName, // Include userName if available
                 evidence: `https://stellar.expert/explorer/testnet/tx/${record.hash}`,
                 date: new Date(record.created_at).toLocaleDateString(),
                 timestamp: record.created_at,

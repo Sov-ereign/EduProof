@@ -241,19 +241,24 @@ export default function StudentDashboard() {
         try {
             const { mintCredential } = await import("@/lib/stellar");
             const category = SKILLS.find(s => s.name === selectedSkill)?.category || "Tech";
+
+            // Get the display name to store in blockchain
+            const displayName = (session?.user as any)?.displayName || session?.user?.name || result.owner || "Student";
+
             const txResult = await mintCredential(
                 wallet,
                 selectedSkill,
                 result.level,
                 evidenceLink.trim(),
                 result.score,
-                category
+                category,
+                displayName // Pass the user's display name
             );
 
             setMintSuccess(txResult);
 
-            // Prepare certificate data
-            const userName = result.owner || wallet?.slice(0, 8) + "..." + wallet?.slice(-4) || "Student";
+            // Prepare certificate data - use GitHub display name, not username
+            const userName = (session?.user as any)?.displayName || session?.user?.name || result.owner || wallet?.slice(0, 8) + "..." + wallet?.slice(-4) || "Student";
             setCertificateData({
                 userName,
                 skill: selectedSkill,
@@ -267,6 +272,7 @@ export default function StudentDashboard() {
                 transactionHash: txResult.hash,
                 explorerUrl: txResult.explorerUrl,
             });
+
 
             // Show certificate
             setShowCertificate(true);
@@ -1003,6 +1009,40 @@ function EvaluationResults({
                         <p className="text-sm font-black text-slate-900 uppercase tracking-widest">Advanced AI Insights</p>
                     </div>
                     <div className="flex-1 overflow-y-auto space-y-4 custom-scrollbar pr-2">
+                        {/* Score Breakdown Details */}
+                        {result && result.score && (
+                            <div className="space-y-3 mb-6 pb-6 border-b border-slate-200">
+                                <div className="flex items-start gap-3 p-4 rounded-2xl bg-blue-50 border border-blue-100">
+                                    <div className="mt-0.5 flex-shrink-0 w-6 h-6 rounded-lg flex items-center justify-center font-bold bg-blue-100 text-blue-600">✓</div>
+                                    <div className="flex-1">
+                                        <span className="font-bold text-blue-900">MCQ Assessment: </span>
+                                        <span className="text-blue-800">You completed the multiple choice questions, demonstrating strong theoretical knowledge and earning points for accuracy.</span>
+                                    </div>
+                                </div>
+                                <div className="flex items-start gap-3 p-4 rounded-2xl bg-purple-50 border border-purple-100">
+                                    <div className="mt-0.5 flex-shrink-0 w-6 h-6 rounded-lg flex items-center justify-center font-bold bg-purple-100 text-purple-600">✓</div>
+                                    <div className="flex-1">
+                                        <span className="font-bold text-purple-900">Coding Challenge: </span>
+                                        <span className="text-purple-800">You completed the coding tests with {result.score >= 80 ? 'excellent' : result.score >= 60 ? 'good' : 'satisfactory'} results, earning points for demonstrating practical coding skills.</span>
+                                    </div>
+                                </div>
+                                <div className="flex items-start gap-3 p-4 rounded-2xl bg-green-50 border border-green-100">
+                                    <div className="mt-0.5 flex-shrink-0 w-6 h-6 rounded-lg flex items-center justify-center font-bold bg-green-100 text-green-600">•</div>
+                                    <div className="flex-1">
+                                        <span className="font-bold text-green-900">Code Readability: </span>
+                                        <span className="text-green-800">Your code has a comment ratio that contributes to code clarity and maintainability, earning points for documentation quality.</span>
+                                    </div>
+                                </div>
+                                <div className="flex items-start gap-3 p-4 rounded-2xl bg-orange-50 border border-orange-100">
+                                    <div className="mt-0.5 flex-shrink-0 w-6 h-6 rounded-lg flex items-center justify-center font-bold bg-orange-100 text-orange-600">•</div>
+                                    <div className="flex-1">
+                                        <span className="font-bold text-orange-900">Repository Quality: </span>
+                                        <span className="text-orange-800">Repository structure and organization contribute to overall project quality score.</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {parsedData.feedbackItems.slice(0, 8).map((f: string, i: number) => {
                             const isPositive = f.includes('✓');
                             const isWarning = f.includes('⚠');
