@@ -1,28 +1,10 @@
-import { NextResponse } from 'next/server';
 import { validateCodeWithSyntaxCheck, type TestCase } from '@/lib/code-validator';
+import { apiSuccess, parseJsonBody, toErrorResponse } from '@/lib/api-utils';
+import { ValidateCodeSchema } from '@/lib/schemas';
 
 export async function POST(request: Request) {
     try {
-        const body = await request.json();
-        const { userCode, testCases, functionSignature, language } = body;
-
-        if (!userCode) {
-            return NextResponse.json({ 
-                error: "userCode is required" 
-            }, { status: 400 });
-        }
-
-        if (!testCases || !Array.isArray(testCases) || testCases.length === 0) {
-            return NextResponse.json({ 
-                error: "testCases array is required and must not be empty" 
-            }, { status: 400 });
-        }
-
-        if (!functionSignature) {
-            return NextResponse.json({ 
-                error: "functionSignature is required" 
-            }, { status: 400 });
-        }
+        const { userCode, testCases, functionSignature, language } = await parseJsonBody(request, ValidateCodeSchema);
 
         // Validate code against test cases
         const result = validateCodeWithSyntaxCheck(
@@ -32,13 +14,10 @@ export async function POST(request: Request) {
             language || 'javascript'
         );
 
-        return NextResponse.json(result);
+        return apiSuccess(result);
 
-    } catch (e: any) {
-        console.error('Error validating code:', e);
-        return NextResponse.json({
-            error: e.message || "Failed to validate code",
-        }, { status: 500 });
+    } catch (error) {
+        return toErrorResponse(error, "Failed to validate code");
     }
 }
 

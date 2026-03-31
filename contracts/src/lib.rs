@@ -1,31 +1,64 @@
 #![no_std]
-use soroban_sdk::{contract, contractimpl, contracttype, Address, Env, String, Symbol, Vec};
+
+use soroban_sdk::{
+    contract, contracterror, contractimpl, contracttype, Address, Bytes, BytesN, Env, Symbol, Vec,
+};
 
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 #[repr(u32)]
 pub enum EduProofError {
-    AlreadyExists = 1,
-    InvalidScore = 2,
-    InvalidLevel = 3,
+    AlreadyInitialized = 1,
+    Unauthorized = 2,
+    AlreadyExists = 3,
+    NotFound = 4,
+    EvaluatorRevoked = 5,
+    InvalidScore = 6,
 }
 
 #[contracttype]
 #[derive(Clone)]
-pub struct Credential {
-    pub owner: Address,
-    pub skill: String,
-    pub level: String, // Beginner, Intermediate, Advanced, Expert
-    pub evidence: String, // URL/IPFS hash
+pub struct Evaluator {
+    pub signer: BytesN<32>,
+    pub active: bool,
+    pub registered_at: u64,
+    pub revoked_at: Option<u64>,
+}
+
+#[contracttype]
+#[derive(Clone)]
+pub struct EvaluationArtifact {
+    pub artifact_hash: BytesN<32>,
+    pub repository_snapshot_hash: BytesN<32>,
+    pub rubric_version: Bytes,
+    pub prompt_version: Bytes,
+    pub model_id: Bytes,
     pub score: u32,
-    pub timestamp: u64,
-    pub category: String, // Tech, Writing, Design, Logic
+    pub artifact_uri: Bytes,
+    pub created_at: u64,
+}
+
+#[contracttype]
+#[derive(Clone)]
+pub struct Attestation {
+    pub attestation_id: BytesN<32>,
+    pub user: Address,
+    pub signer: BytesN<32>,
+    pub artifact_hash: BytesN<32>,
+    pub rubric_version: Bytes,
+    pub model_id: Bytes,
+    pub signature: BytesN<64>,
+    pub created_at: u64,
+    pub revoked: bool,
 }
 
 #[contracttype]
 pub enum DataKey {
-    Credential(Address, String), // Key by User + Skill Name
-    UserSkills(Address), // List of skills for a user
+    Admin,
+    Evaluator(BytesN<32>),
+    Artifact(BytesN<32>),
+    Attestation(BytesN<32>),
+    UserAttestations(Address),
 }
 
 #[contract]
@@ -33,95 +66,247 @@ pub struct EduProofContract;
 
 #[contractimpl]
 impl EduProofContract {
-    /// Mint a new credential or update existing one
-    /// User must authorize the transaction
-    pub fn mint_credential(
+    pub fn init(env: Env, admin: Address) -> Result<(), EduProofError> {
+        if env.storage().instance().has(&DataKey::Admin) {
+            return Err(EduProofError::AlreadyInitialized);
+        }
+
+        admin.require_auth();
+        env.storage().instance().set(&DataKey::Admin, &admin);
+        Ok(())
+    }
+
+    pub fn register_evaluator(env: Env, signer: BytesN<32>) -> Result<(), EduProofError> {
+        let admin = Self::read_admin(&env)?;
+        admin.require_auth();
+
+        let key = DataKey::Evaluator(signer.clone());
+        if env.storage().persistent().has(&key) {
+            return Err(EduProofError::AlreadyExists);
+        }
+
+        let evaluator = Evaluator {
+            signer: signer.clone(),
+            active: true,
+            registered_at: env.ledger().timestamp(),
+            revoked_at: None,
+        };
+
+        env.storage().persistent().set(&key, &evaluator);
+        env.events()
+            .publish((Symbol::new(&env, "evaluator_registered"),), signer);
+        Ok(())
+    }
+
+    pub fn revoke_evaluator(env: Env, signer: BytesN<32>) -> Result<(), EduProofError> {
+        let admin = Self::read_admin(&env)?;
+        admin.require_auth();
+
+        let key = DataKey::Evaluator(signer.clone());
+        let mut evaluator: Evaluator = env
+            .storage()
+            .persistent()
+            .get(&key)
+            .ok_or(EduProofError::NotFound)?;
+        evaluator.active = false;
+        evaluator.revoked_at = Some(env.ledger().timestamp());
+        env.storage().persistent().set(&key, &evaluator);
+
+        env.events()
+            .publish((Symbol::new(&env, "evaluator_revoked"),), signer);
+        Ok(())
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn submit_attestation(
         env: Env,
-        to: Address,
-        skill: String,
-        level: String,
-        evidence: String,
+        attestation_id: BytesN<32>,
+        user: Address,
+        signer: BytesN<32>,
+        artifact_hash: BytesN<32>,
+        repository_snapshot_hash: BytesN<32>,
+        rubric_version: Bytes,
+        prompt_version: Bytes,
+        model_id: Bytes,
         score: u32,
-        category: String,
+        artifact_uri: Bytes,
+        signature: BytesN<64>,
     ) -> Result<(), EduProofError> {
-        // Validate score
         if score > 100 {
             return Err(EduProofError::InvalidScore);
         }
 
-        // Validate level
-        let valid_levels = ["Beginner", "Intermediate", "Advanced", "Expert"];
-        if !valid_levels.iter().any(|&l| l == level.to_string()) {
-            return Err(EduProofError::InvalidLevel);
+        let evaluator_key = DataKey::Evaluator(signer.clone());
+        let evaluator: Evaluator = env
+            .storage()
+            .persistent()
+            .get(&evaluator_key)
+            .ok_or(EduProofError::NotFound)?;
+        if !evaluator.active {
+            return Err(EduProofError::EvaluatorRevoked);
         }
 
-        // User must authorize
-        to.require_auth();
+        let attestation_key = DataKey::Attestation(attestation_id.clone());
+        if env.storage().persistent().has(&attestation_key) {
+            return Err(EduProofError::AlreadyExists);
+        }
 
-        let key = DataKey::Credential(to.clone(), skill.clone());
-        let is_update = env.storage().persistent().has(&key);
+        let mut signed_message = Bytes::new(&env);
+        signed_message.append(&Bytes::from_array(&env, &artifact_hash.to_array()));
+        env.crypto()
+            .ed25519_verify(&signer, &signed_message, &signature);
 
-        let credential = Credential {
-            owner: to.clone(),
-            skill: skill.clone(),
-            level,
-            evidence,
+        let artifact_key = DataKey::Artifact(artifact_hash.clone());
+        let artifact = EvaluationArtifact {
+            artifact_hash: artifact_hash.clone(),
+            repository_snapshot_hash,
+            rubric_version: rubric_version.clone(),
+            prompt_version,
+            model_id: model_id.clone(),
             score,
-            timestamp: env.ledger().timestamp(),
-            category,
+            artifact_uri,
+            created_at: env.ledger().timestamp(),
         };
+        env.storage().persistent().set(&artifact_key, &artifact);
 
-        env.storage().persistent().set(&key, &credential);
-        
-        // Update user's skill list
-        let skills_key = DataKey::UserSkills(to.clone());
-        let mut skills: Vec<String> = if env.storage().persistent().has(&skills_key) {
-            env.storage().persistent().get(&skills_key).unwrap()
-        } else {
-            Vec::new(&env)
+        let attestation = Attestation {
+            attestation_id: attestation_id.clone(),
+            user: user.clone(),
+            signer: signer.clone(),
+            artifact_hash: artifact_hash.clone(),
+            rubric_version,
+            model_id,
+            signature,
+            created_at: env.ledger().timestamp(),
+            revoked: false,
         };
+        env.storage().persistent().set(&attestation_key, &attestation);
 
-        // Add skill if not already in list
-        let mut found = false;
-        for i in 0..skills.len() {
-            if skills.get(i).unwrap() == skill {
-                found = true;
-                break;
-            }
-        }
-        if !found {
-            skills.push_back(skill);
-            env.storage().persistent().set(&skills_key, &skills);
-        }
-        
-        // Emit event with more details
+        let user_key = DataKey::UserAttestations(user.clone());
+        let mut attestation_ids: Vec<BytesN<32>> = env
+            .storage()
+            .persistent()
+            .get(&user_key)
+            .unwrap_or(Vec::new(&env));
+        attestation_ids.push_back(attestation_id.clone());
+        env.storage().persistent().set(&user_key, &attestation_ids);
+
         env.events().publish(
-            (Symbol::new(&env, if is_update { "update" } else { "mint" }), to), 
-            credential
+            (Symbol::new(&env, "attestation_submitted"), user),
+            attestation_id,
         );
-
         Ok(())
     }
 
-    /// Get a specific credential for a user and skill
-    pub fn get_credential(env: Env, user: Address, skill: String) -> Option<Credential> {
-        let key = DataKey::Credential(user, skill);
-        env.storage().persistent().get(&key)
+    pub fn verify_attestation(env: Env, attestation_id: BytesN<32>) -> Result<bool, EduProofError> {
+        let attestation_key = DataKey::Attestation(attestation_id);
+        let attestation: Attestation = env
+            .storage()
+            .persistent()
+            .get(&attestation_key)
+            .ok_or(EduProofError::NotFound)?;
+        if attestation.revoked {
+            return Ok(false);
+        }
+
+        let evaluator_key = DataKey::Evaluator(attestation.signer.clone());
+        let evaluator: Evaluator = env
+            .storage()
+            .persistent()
+            .get(&evaluator_key)
+            .ok_or(EduProofError::NotFound)?;
+        if !evaluator.active {
+            return Ok(false);
+        }
+
+        let artifact_key = DataKey::Artifact(attestation.artifact_hash.clone());
+        if !env.storage().persistent().has(&artifact_key) {
+            return Ok(false);
+        }
+
+        let mut signed_message = Bytes::new(&env);
+        signed_message.append(&Bytes::from_array(&env, &attestation.artifact_hash.to_array()));
+        env.crypto()
+            .ed25519_verify(&attestation.signer, &signed_message, &attestation.signature);
+
+        Ok(true)
     }
 
-    /// Check if user has a credential for a skill
-    pub fn has_credential(env: Env, user: Address, skill: String) -> bool {
-        let key = DataKey::Credential(user, skill);
-        env.storage().persistent().has(&key)
+    pub fn get_attestations_by_user(
+        env: Env,
+        user: Address,
+    ) -> Result<Vec<Attestation>, EduProofError> {
+        let key = DataKey::UserAttestations(user);
+        let attestation_ids: Vec<BytesN<32>> = env
+            .storage()
+            .persistent()
+            .get(&key)
+            .unwrap_or(Vec::new(&env));
+
+        let mut out: Vec<Attestation> = Vec::new(&env);
+        for i in 0..attestation_ids.len() {
+            let id = attestation_ids.get(i).ok_or(EduProofError::NotFound)?;
+            let attestation: Attestation = env
+                .storage()
+                .persistent()
+                .get(&DataKey::Attestation(id))
+                .ok_or(EduProofError::NotFound)?;
+            out.push_back(attestation);
+        }
+
+        Ok(out)
     }
 
-    /// Get all skills for a user (returns Vec<String>)
-    pub fn get_user_skills(env: Env, user: Address) -> Vec<String> {
-        let key = DataKey::UserSkills(user);
-        if env.storage().persistent().has(&key) {
-            env.storage().persistent().get(&key).unwrap()
-        } else {
-            Vec::new(&env)
+    fn read_admin(env: &Env) -> Result<Address, EduProofError> {
+        env.storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .ok_or(EduProofError::Unauthorized)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use soroban_sdk::testutils::Address as _;
+    use soroban_sdk::{BytesN, Env};
+
+    fn random_signer(env: &Env, value: u8) -> BytesN<32> {
+        let bytes = [value; 32];
+        BytesN::from_array(env, &bytes)
+    }
+
+    #[test]
+    fn evaluator_register_and_revoke_flow() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, EduProofContract);
+        let client = EduProofContractClient::new(&env, &contract_id);
+
+        let admin = Address::generate(&env);
+        client.init(&admin);
+
+        let signer = random_signer(&env, 7);
+        client.register_evaluator(&signer);
+        let active = client.verify_attestation(&BytesN::from_array(&env, &[1; 32]));
+        assert_eq!(active.is_err(), true);
+
+        client.revoke_evaluator(&signer);
+    }
+
+    #[test]
+    fn supports_multiple_evaluator_lifecycle_transitions() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, EduProofContract);
+        let client = EduProofContractClient::new(&env, &contract_id);
+
+        let admin = Address::generate(&env);
+        client.init(&admin);
+
+        for i in 1..5 {
+            let signer = random_signer(&env, i);
+            client.register_evaluator(&signer);
+            client.revoke_evaluator(&signer);
         }
     }
 }
+

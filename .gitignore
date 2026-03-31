@@ -37,6 +37,7 @@ next-env.d.ts
 
 # rust
 /target
+contracts/target/
 **/*.rs.bk
 Cargo.lock
 

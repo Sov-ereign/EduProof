@@ -1,168 +1,49 @@
 import { NextResponse } from 'next/server';
 import type { RepoAnalysis } from '@/lib/gemini';
-
-// Detect evidence type from URL
-function detectEvidenceType(url: string): 'github' | 'google-docs' | 'loom' | 'portfolio' | 'other' {
-    if (url.includes('github.com')) return 'github';
-    if (url.includes('docs.google.com') || url.includes('drive.google.com')) return 'google-docs';
-    if (url.includes('loom.com')) return 'loom';
-    if (url.includes('portfolio') || url.includes('behance') || url.includes('dribbble')) return 'portfolio';
-    return 'other';
-}
+import { fetchWithTimeout } from '@/lib/http';
+import { detectEvidenceType, parseGitHubRepoUrl, parseUrlSafe } from '@/lib/url';
+import { apiError, apiSuccess, parseQuery, toErrorResponse } from '@/lib/api-utils';
+import { fetchGitHubSourceCode } from '@/lib/evaluation/github-ingestion';
+import { logger } from '@/lib/logger';
+import { EvaluateQuerySchema } from '@/lib/schemas';
 
 // Fetch source code files from GitHub
 async function fetchSourceCode(owner: string, repo: string, skill: string): Promise<Array<{ path: string; content: string; extension: string }>> {
-    // CRITICAL: Always use GitHub token to avoid rate limits
-    const headers: HeadersInit = {
-        'Accept': 'application/vnd.github.v3+json',
-    };
-    
-    const githubToken = process.env.GITHUB_TOKEN;
-    if (githubToken) {
-        headers['Authorization'] = `token ${githubToken}`;
-    } else {
-        console.warn('WARNING: GITHUB_TOKEN not set in fetchSourceCode. Rate limits will be very low.');
-    }
-
-    const filesToTry: Record<string, string[]> = {
-        Rust: ['src/lib.rs', 'src/main.rs', 'src/bin', 'examples', 'tests'],
-        Python: ['*.py', 'main.py', 'app.py', 'src', '*.pyx'],
-        React: ['src/App.tsx', 'src/App.jsx', 'src/index.tsx', 'src/index.jsx', 'src/components', 'src/pages'],
-        JavaScript: ['src/index.js', 'src/app.js', 'src', '*.js'],
-        TypeScript: ['src/index.ts', 'src/app.ts', 'src', '*.ts', '*.tsx']
-    };
-
-    const candidates = filesToTry[skill] || ['src', 'lib', '*.js', '*.py'];
-    const fetchedFiles: Array<{ path: string; content: string; extension: string }> = [];
-
-    // Helper function to fetch files from a directory
-    const fetchFilesFromDir = async (dirPath: string, extensions: string[], maxFiles: number): Promise<void> => {
-        if (fetchedFiles.length >= maxFiles) return;
-        
-        try {
-            const dirRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${dirPath}`, { headers });
-            if (dirRes.ok) {
-                const dirData = await dirRes.json();
-                if (Array.isArray(dirData)) {
-                    for (const item of dirData) {
-                        if (fetchedFiles.length >= maxFiles) break;
-                        
-                        if (item.type === 'file' && extensions.some(ext => item.name.endsWith(ext))) {
-                            try {
-                                const fetchUrl = item.url;
-                                const fileRes = await fetch(fetchUrl, { headers });
-                                if (fileRes.ok) {
-                                    const fileData = await fileRes.json();
-                                    let content = '';
-                                    if (fileData.content) {
-                                        content = Buffer.from(fileData.content, 'base64').toString('utf-8');
-                                    } else if (item.download_url) {
-                                        const dlRes = await fetch(item.download_url, { headers });
-                                        content = await dlRes.text();
-                                    }
-                                    if (content) {
-                                        fetchedFiles.push({
-                                            path: item.path,
-                                            content,
-                                            extension: item.name.substring(item.name.lastIndexOf('.'))
-                                        });
-                                    }
-                                }
-                            } catch (e) { continue; }
-                        } else if (item.type === 'dir' && fetchedFiles.length < maxFiles - 5) {
-                            await fetchFilesFromDir(item.path, extensions, maxFiles);
-                        }
-                    }
-                }
-            }
-        } catch (e) {
-            // Silently fail for subdirectories
-        }
-    };
-
-    try {
-        const skillExtensions: Record<string, string[]> = {
-            Rust: ['.rs'],
-            Python: ['.py', '.pyw'],
-            React: ['.jsx', '.tsx', '.js', '.ts'],
-            JavaScript: ['.js', '.mjs'],
-            TypeScript: ['.ts', '.tsx']
-        };
-        const extensions = skillExtensions[skill] || [];
-
-        const dirsToCheck: string[] = ['', 'src', 'src/components', 'src/pages', 'src/app', 'lib', 'components'];
-        
-        for (const dir of dirsToCheck) {
-            if (fetchedFiles.length >= 15) break;
-            await fetchFilesFromDir(dir, extensions, 15);
-        }
-    } catch (e) {
-        // Fallback to specific file paths
-    }
-
-    // Fallback: try specific file paths
-    if (fetchedFiles.length === 0) {
-        const specificFiles: Record<string, string[]> = {
-            Rust: ['src/lib.rs', 'src/main.rs'],
-            Python: ['main.py', 'app.py', '__init__.py'],
-            React: ['src/App.tsx', 'src/App.jsx', 'src/index.tsx'],
-            JavaScript: ['src/index.js', 'app.js'],
-            TypeScript: ['src/index.ts', 'app.ts']
-        };
-
-        for (const file of (specificFiles[skill] || [])) {
-            try {
-                const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${file}`, { headers });
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.content && data.type === 'file') {
-                        const content = Buffer.from(data.content, 'base64').toString('utf-8');
-                        fetchedFiles.push({
-                            path: file,
-                            content,
-                            extension: file.substring(file.lastIndexOf('.'))
-                        });
-                        if (fetchedFiles.length >= 10) break;
-                    }
-                }
-            } catch (e) { continue; }
-        }
-    }
-
-    return fetchedFiles;
+    return fetchGitHubSourceCode(owner, repo, skill, process.env.GITHUB_TOKEN);
 }
 
 export async function GET(request: Request) {
-    const { searchParams } = new URL(request.url);
-    const evidenceUrl = searchParams.get('url');
-    const skill = searchParams.get('skill') || 'Python';
-
-    if (!evidenceUrl || evidenceUrl.trim().length === 0) {
-        return NextResponse.json({ error: "Evidence URL is required" }, { status: 400 });
+    let evidenceUrl = "";
+    let skill = "Python";
+    try {
+        const query = parseQuery(request, EvaluateQuerySchema);
+        evidenceUrl = query.url;
+        skill = query.skill;
+    } catch (error) {
+        return toErrorResponse(error, "Invalid query parameters");
     }
 
-    try {
-        new URL(evidenceUrl);
-    } catch {
-        return NextResponse.json({ error: "Invalid URL format provided" }, { status: 400 });
+    if (!evidenceUrl || evidenceUrl.trim().length === 0) {
+        return apiError("Evidence URL is required", 400, "MISSING_URL");
+    }
+
+    if (!parseUrlSafe(evidenceUrl)) {
+        return apiError("Invalid URL format provided", 400, "INVALID_URL");
     }
 
     try {
         const evidenceType = detectEvidenceType(evidenceUrl);
         
         if (evidenceType !== 'github') {
-            return NextResponse.json({ 
-                error: "Currently only GitHub repositories are supported for test-based evaluation" 
-            }, { status: 400 });
+            return apiError("Currently only GitHub repositories are supported for test-based evaluation", 400, "UNSUPPORTED_EVIDENCE");
         }
 
         // Extract Owner/Repo
-        const parts = evidenceUrl.split("github.com/")[1]?.split("/");
-        if (!parts || parts.length < 2) {
-            return NextResponse.json({ error: "Invalid GitHub URL format" }, { status: 400 });
+        const repoInfo = parseGitHubRepoUrl(evidenceUrl);
+        if (!repoInfo) {
+            return apiError("Invalid GitHub URL format", 400, "INVALID_GITHUB_URL");
         }
-        const owner = parts[0];
-        const repo = parts[1].replace(/\/$/, '').split('?')[0].split('#')[0];
+        const { owner, repo } = repoInfo;
 
         // CRITICAL: Always use GitHub token to avoid rate limits
         const headers: HeadersInit = {
@@ -171,16 +52,16 @@ export async function GET(request: Request) {
         
         const githubToken = process.env.GITHUB_TOKEN;
         if (!githubToken) {
-            console.warn('WARNING: GITHUB_TOKEN not set. API rate limits will be very low (60 requests/hour).');
+            logger.warn("GITHUB_TOKEN not set; API rate limits will be low");
         } else {
             headers['Authorization'] = `token ${githubToken}`;
         }
 
         // Fetch repository data
         const [repoDataRes, readmeRes, langDataRes] = await Promise.all([
-            fetch(`https://api.github.com/repos/${owner}/${repo}`, { headers }),
-            fetch(`https://api.github.com/repos/${owner}/${repo}/readme`, { headers }).catch(() => null),
-            fetch(`https://api.github.com/repos/${owner}/${repo}/languages`, { headers }).catch(() => null)
+            fetchWithTimeout(`https://api.github.com/repos/${owner}/${repo}`, { headers }, 15000),
+            fetchWithTimeout(`https://api.github.com/repos/${owner}/${repo}/readme`, { headers }, 15000).catch(() => null),
+            fetchWithTimeout(`https://api.github.com/repos/${owner}/${repo}/languages`, { headers }, 15000).catch(() => null)
         ]);
 
         if (!repoDataRes.ok) {
@@ -200,9 +81,7 @@ export async function GET(request: Request) {
                     error: "GitHub API authentication failed. Please check your GITHUB_TOKEN in .env.local" 
                 }, { status: 401 });
             }
-            return NextResponse.json({ 
-                error: `GitHub API Error (${repoDataRes.status})` 
-            }, { status: repoDataRes.status });
+            return apiError(`GitHub API Error (${repoDataRes.status})`, repoDataRes.status, "GITHUB_API_ERROR");
         }
 
         const repoData = await repoDataRes.json();
@@ -214,7 +93,7 @@ export async function GET(request: Request) {
                 const readmeData = await readmeRes.json();
                 readmeContent = Buffer.from(readmeData.content, 'base64').toString('utf-8');
             } catch (e) {
-                console.warn('Failed to decode README:', e);
+                logger.warn({ err: e }, "failed to decode README");
             }
         }
 
@@ -224,7 +103,7 @@ export async function GET(request: Request) {
             try {
                 languages = await langDataRes.json();
             } catch (e) {
-                console.warn('Failed to fetch languages:', e);
+                logger.warn({ err: e }, "failed to parse repository language payload");
             }
         }
 
@@ -233,14 +112,12 @@ export async function GET(request: Request) {
         try {
             sourceFiles = await fetchSourceCode(owner, repo, skill);
         } catch (error) {
-            console.error('Error fetching source code:', error);
+            logger.error({ err: error }, "failed to fetch source code");
         }
 
         // Validate that we have some source code
         if (sourceFiles.length === 0) {
-            return NextResponse.json({ 
-                error: "Could not fetch source code from repository. Please ensure the repository contains code files and is public." 
-            }, { status: 400 });
+            return apiError("Could not fetch source code from repository. Please ensure the repository contains code files and is public.", 400, "NO_SOURCE_FILES");
         }
 
         // Prepare repo analysis for test generation
@@ -259,7 +136,7 @@ export async function GET(request: Request) {
             }
         };
 
-        return NextResponse.json({
+        return apiSuccess({
             readyForTest: true,
             repoAnalysis,
             skill,
@@ -267,11 +144,8 @@ export async function GET(request: Request) {
             evidenceType: 'github'
         });
 
-    } catch (e: any) {
-        console.error('Prepare test error:', e);
-        return NextResponse.json({
-            error: e.message || "Failed to prepare test",
-        }, { status: 500 });
+    } catch (error) {
+        return toErrorResponse(error, "Failed to prepare test");
     }
 }
 

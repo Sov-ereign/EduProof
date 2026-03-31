@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import type { RepoAnalysis } from '@/lib/gemini';
 import {
     analyzeReact,
@@ -8,23 +7,13 @@ import {
     analyzeTypeScript,
     FileAnalysis
 } from '@/lib/code-analyzer';
+import { apiSuccess, parseJsonBody, toErrorResponse } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
+import { FinalScoreSchema } from '@/lib/schemas';
 
 export async function POST(request: Request) {
     try {
-        const body = await request.json();
-        const { repoAnalysis, skill, mcqScore, codingScore } = body;
-
-        if (!repoAnalysis) {
-            return NextResponse.json({ 
-                error: "repoAnalysis is required" 
-            }, { status: 400 });
-        }
-
-        if (mcqScore === undefined || codingScore === undefined) {
-            return NextResponse.json({ 
-                error: "mcqScore and codingScore are required" 
-            }, { status: 400 });
-        }
+        const { repoAnalysis, skill, mcqScore, codingScore } = await parseJsonBody(request, FinalScoreSchema);
 
         // Convert repoAnalysis files to FileAnalysis format
         const fileAnalyses: FileAnalysis[] = repoAnalysis.files.map((file: any) => ({
@@ -97,7 +86,7 @@ export async function POST(request: Request) {
                 codeQualityFeedback = comprehensiveAnalysis.codeReadability?.feedback || [];
             }
         } catch (error) {
-            console.error('Error analyzing code quality:', error);
+            logger.warn({ err: error }, "code quality analysis failed");
             codeQualityFeedback.push('⚠️ Could not perform comprehensive code analysis');
         }
 
@@ -124,7 +113,7 @@ export async function POST(request: Request) {
         // Ensure score is between 0 and 100
         const clampedScore = Math.min(100, Math.max(0, finalScore));
 
-        return NextResponse.json({
+        return apiSuccess({
             finalScore: clampedScore,
             breakdown: {
                 mcq: {
@@ -146,11 +135,8 @@ export async function POST(request: Request) {
             codeQualityFeedback: codeQualityFeedback.slice(0, 6) // Limit to 6 feedback items
         });
 
-    } catch (e: any) {
-        console.error('Error calculating final score:', e);
-        return NextResponse.json({
-            error: e.message || "Failed to calculate final score",
-        }, { status: 500 });
+    } catch (error) {
+        return toErrorResponse(error, "Failed to calculate final score");
     }
 }
 

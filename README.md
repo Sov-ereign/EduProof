@@ -231,14 +231,40 @@ New-Item .env.local
 touch .env.local
 ```
 
-Add your API keys to `.env.local`:
+Add your environment variables to `.env.local` (you can copy from `.env.example`):
 
 ```env
+# NextAuth (Required for login)
+GITHUB_ID=your_github_oauth_client_id
+GITHUB_SECRET=your_github_oauth_client_secret
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=your_random_secret
+
+# MongoDB (Required)
+MONGODB_URI=your_mongodb_connection_string
+
 # GitHub Personal Access Token (Required)
 GITHUB_TOKEN=your_github_token_here
 
 # OpenRouter API Key (Required)
 OPENROUTER_API_KEY=your_openrouter_api_key_here
+
+# Stripe (Required for verifier billing)
+STRIPE_SECRET_KEY=your_stripe_secret_key
+STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
+
+# Attestation signing and anchoring
+EVALUATOR_SECRET_KEY=your_stellar_secret_for_evaluator_signature
+EVALUATOR_ADMIN_IDS=comma,separated,nextauth_user_ids
+ATTESTATION_ANCHOR_SECRET_KEY=your_stellar_secret_for_anchor_account
+STELLAR_HORIZON_URL=https://horizon-testnet.stellar.org
+STELLAR_NETWORK_PASSPHRASE=Test SDF Network ; September 2015
+
+# Rate limiting / security hardening
+UPSTASH_REDIS_REST_URL=optional_upstash_rest_url
+UPSTASH_REDIS_REST_TOKEN=optional_upstash_rest_token
+ENFORCE_WALLET_CHALLENGE=false
+LOG_LEVEL=info
 ```
 
 **How to get API keys:**

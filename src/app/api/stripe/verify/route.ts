@@ -1,60 +1,75 @@
-import { NextResponse } from "next/server";
 import Stripe from "stripe";
 
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
-import clientPromise from "@/lib/mongodb";
-import { ObjectId } from "mongodb";
+import { apiError, apiSuccess, getRequestIp, parseQuery, toErrorResponse } from "@/lib/api-utils";
+import { withReqContext } from "@/lib/logger";
+import { enforceRateLimit } from "@/lib/rate-limit";
+import { StripeVerifyQuerySchema } from "@/lib/schemas";
+import { grantSubscriptionForUser } from "@/lib/subscription";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-    apiVersion: "2025-01-27.acacia" as any,
-});
+function getStripeClient() {
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    if (!secretKey) {
+        throw new Error("STRIPE_SECRET_KEY is not configured");
+    }
+
+    return new Stripe(secretKey, {
+        apiVersion: "2025-12-15.clover",
+    });
+}
 
 export async function GET(request: Request) {
-    const { searchParams } = new URL(request.url);
-    const sessionId = searchParams.get("session_id");
-
-    if (!sessionId) {
-        return NextResponse.json({ error: "Missing session_id" }, { status: 400 });
+    const log = withReqContext(request);
+    const authSession = await getServerSession(authOptions);
+    if (!authSession?.user?.id) {
+        return apiError("Unauthorized", 401, "UNAUTHORIZED");
     }
 
     try {
-        const session = await stripe.checkout.sessions.retrieve(sessionId);
-        if (session.payment_status === "paid") {
-            // Update User in MongoDB
-            const authSession = await getServerSession(authOptions);
-            if (authSession?.user?.id) {
-                const client = await clientPromise;
-                const db = client.db();
-                await db.collection("users").updateOne(
-                    { _id: new ObjectId(authSession.user.id) },
-                    {
-                        $set: {
-                            isSubscribed: true,
-                            subscriptionExpiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
-                        }
-                    }
-                );
-
-                // Record detailed billing in a new collection
-                await db.collection("billings").insertOne({
-                    userId: new ObjectId(authSession.user.id),
-                    amount: session.amount_total ? session.amount_total / 100 : 30,
-                    currency: session.currency || "usd",
-                    status: "paid",
-                    stripeSessionId: sessionId,
-                    date: new Date(),
-                    userName: authSession.user.name,
-                    userEmail: authSession.user.email
-                });
-            }
-
-            return NextResponse.json({ success: true, metadata: session.metadata });
-        } else {
-            return NextResponse.json({ success: false, status: session.payment_status });
+        const rateLimit = await enforceRateLimit({
+            key: `stripe-verify:${authSession.user.id}:${getRequestIp(request)}`,
+            limit: 30,
+            windowMs: 60_000,
+        });
+        if (!rateLimit.allowed) {
+            return apiError("Too many verification attempts", 429, "RATE_LIMITED");
         }
-    } catch (error: any) {
-        console.error("Stripe Verification Error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+
+        const query = parseQuery(request, StripeVerifyQuerySchema);
+        const sessionId = query.session_id;
+
+        const stripe = getStripeClient();
+        const session = await stripe.checkout.sessions.retrieve(sessionId);
+        const boundUserId = session.metadata?.userId || session.client_reference_id;
+        if (!boundUserId || boundUserId !== authSession.user.id) {
+            return apiError("Checkout session does not belong to current user", 403, "FORBIDDEN");
+        }
+
+        if (session.payment_status !== "paid") {
+            return apiSuccess({ success: false, granted: false, status: session.payment_status });
+        }
+
+        const grantResult = await grantSubscriptionForUser({
+            userId: authSession.user.id,
+            stripeSessionId: sessionId,
+            amount: session.amount_total ? session.amount_total / 100 : 30,
+            currency: session.currency || "usd",
+            status: session.payment_status || "paid",
+            userName: authSession.user.name,
+            userEmail: authSession.user.email,
+            paymentIntentId:
+                typeof session.payment_intent === "string" ? session.payment_intent : null,
+        });
+
+        log.info({ userId: authSession.user.id, sessionId, alreadyGranted: !grantResult.applied }, "stripe verification success");
+        return apiSuccess({
+            success: true,
+            granted: true,
+            alreadyGranted: !grantResult.applied,
+            expiresAt: grantResult.expiresAt.toISOString(),
+        });
+    } catch (error) {
+        return toErrorResponse(error, "Stripe verification failed");
     }
 }

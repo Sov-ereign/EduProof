@@ -1,3 +1,6 @@
+import { fetchWithTimeout } from "@/lib/http";
+import { logger } from "@/lib/logger";
+
 // OpenRouter API client
 function getOpenRouterApiKey() {
     const apiKey = process.env.OPENROUTER_API_KEY;
@@ -30,7 +33,7 @@ async function getAvailableModel(): Promise<string> {
     for (const modelName of modelsToTry) {
         try {
             // Test with a tiny prompt
-            const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            const response = await fetchWithTimeout('https://openrouter.ai/api/v1/chat/completions', {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${apiKey}`,
@@ -41,15 +44,15 @@ async function getAvailableModel(): Promise<string> {
                     messages: [{ role: 'user', content: 'Hi' }],
                     max_tokens: 10,
                 }),
-            });
+            }, 15000);
             
             if (response.ok) {
-                console.log(`✅ Found working model: ${modelName}`);
+                logger.info({ model: modelName }, "openrouter model selected");
                 cachedModelName = modelName;
                 return modelName;
             }
         } catch (e: any) {
-            console.log(`⚠️ Model ${modelName} not available, trying next...`);
+            logger.warn({ model: modelName, err: e }, "openrouter model unavailable, trying fallback");
             lastError = e;
             continue;
         }
@@ -65,7 +68,7 @@ async function getAvailableModel(): Promise<string> {
 async function callOpenRouter(model: string, messages: Array<{ role: string; content: string }>, maxTokens: number = 2000) {
     const apiKey = getOpenRouterApiKey();
     
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const response = await fetchWithTimeout('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${apiKey}`,
@@ -77,7 +80,7 @@ async function callOpenRouter(model: string, messages: Array<{ role: string; con
             max_tokens: maxTokens,
             temperature: 0.5, // Lower temperature for faster, more deterministic responses
         }),
-    });
+    }, 25000);
     
     if (!response.ok) {
         const error = await response.json().catch(() => ({ error: 'Unknown error' }));
@@ -317,16 +320,24 @@ function parseJSONSafely(text: string, context: string = 'JSON'): any {
     } catch (parseError: any) {
         // Log detailed error information
         const errorPos = parseError.message.match(/position (\d+)/)?.[1];
-        console.error(`Failed to parse ${context}:`, parseError.message);
+        logger.error({ err: parseError, context }, "failed to parse model JSON output");
         
         if (errorPos) {
             const pos = parseInt(errorPos);
             const start = Math.max(0, pos - 200);
             const end = Math.min(cleaned.length, pos + 200);
-            console.error('Problematic JSON around error position:', cleaned.substring(start, end));
-            console.error('Error at position:', pos, 'Character:', cleaned[pos], 'Code:', cleaned.charCodeAt(pos));
+            logger.error(
+                {
+                    context,
+                    preview: cleaned.substring(start, end),
+                    position: pos,
+                    character: cleaned[pos],
+                    charCode: cleaned.charCodeAt(pos),
+                },
+                "problematic JSON near parser error position",
+            );
         } else {
-            console.error('Problematic JSON text (first 2000 chars):', cleaned.substring(0, 2000));
+            logger.error({ context, preview: cleaned.substring(0, 2000) }, "problematic JSON preview");
         }
         
         // Strategy 7: Fix escaped quotes in arrays (common AI mistake)
@@ -447,7 +458,7 @@ function parseJSONSafely(text: string, context: string = 'JSON'): any {
                         
                         const parsed = JSON.parse(cleanedPartial);
                         if (Array.isArray(parsed) && parsed.length > 0) {
-                            console.warn(`⚠️ Parsed partial JSON successfully (${parsed.length} items)`);
+                            logger.warn({ context, itemCount: parsed.length }, "parsed partial JSON fallback");
                             return parsed;
                         }
                     } catch {
@@ -480,14 +491,13 @@ function parseJSONSafely(text: string, context: string = 'JSON'): any {
                     }
                     
                     if (validObjects.length > 0) {
-                        console.warn(`⚠️ Extracted ${validObjects.length} valid objects from malformed JSON`);
+                        logger.warn({ context, itemCount: validObjects.length }, "extracted valid JSON objects from malformed output");
                         return validObjects;
                     }
                 }
                 
                 // All strategies failed - but let's still try to provide useful error
-                console.error(`❌ All JSON parsing strategies failed for ${context}`);
-                console.error('Final attempt (first 500 chars):', ultraLenient.substring(0, 500));
+                logger.error({ context, preview: ultraLenient.substring(0, 500) }, "all JSON parsing strategies failed");
                 
                 // Don't throw - return empty array or try one more time with very basic cleanup
                 // This allows the retry mechanism to kick in
@@ -601,7 +611,7 @@ Return ONLY a JSON array of objects with the following structure:
         })).slice(0, count);
 
     } catch (error: any) {
-        console.error('Error generating MCQs:', error);
+        logger.error({ err: error }, "error generating MCQs");
         throw new Error(`Failed to generate MCQs: ${error.message}`);
     }
 }
@@ -669,7 +679,7 @@ Generate ${count} challenges. JSON only, no other text.`;
 
             // Log raw response for debugging (only in dev mode and first attempt)
             if (attempt === 1 && process.env.NODE_ENV === 'development') {
-                console.log('Raw AI response preview:', text.substring(0, 300));
+                logger.debug({ preview: text.substring(0, 300) }, "raw coding challenge response preview");
             }
 
             // Parse JSON with robust error handling
@@ -708,17 +718,17 @@ Generate ${count} challenges. JSON only, no other text.`;
 
         } catch (error: any) {
             lastError = error;
-            console.error(`Error generating coding challenges (attempt ${attempt}/${maxRetries}):`, error.message);
+            logger.error({ err: error, attempt, maxRetries }, "error generating coding challenges");
             
             if (attempt < maxRetries) {
                 // Wait before retry (shorter delays for faster retries)
                 await new Promise(resolve => setTimeout(resolve, 300 * attempt));
-                console.log(`Retrying generation (attempt ${attempt + 1}/${maxRetries})...`);
+                logger.warn({ nextAttempt: attempt + 1, maxRetries }, "retrying coding challenge generation");
             }
         }
     }
     
     // All retries failed
-    console.error('Failed to generate coding challenges after all retries:', lastError);
+    logger.error({ err: lastError }, "failed to generate coding challenges after retries");
     throw new Error(`Failed to generate coding challenges: ${lastError?.message || 'Unknown error'}`);
 }

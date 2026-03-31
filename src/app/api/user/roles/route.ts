@@ -1,29 +1,18 @@
-import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
+import { apiError, apiSuccess, parseJsonBody, toErrorResponse } from "@/lib/api-utils";
+import { RolesBodySchema } from "@/lib/schemas";
 
 export async function POST(request: Request) {
     try {
         const session = await getServerSession(authOptions);
         if (!session?.user?.id) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return apiError("Unauthorized", 401, "UNAUTHORIZED");
         }
 
-        const { roles } = await request.json();
-
-        // Validate roles
-        if (!Array.isArray(roles) || roles.length === 0) {
-            return NextResponse.json({ error: "Invalid roles" }, { status: 400 });
-        }
-
-        const validRoles = ["student", "verifier"];
-        const isValid = roles.every(role => validRoles.includes(role));
-
-        if (!isValid) {
-            return NextResponse.json({ error: "Invalid role values" }, { status: 400 });
-        }
+        const { roles } = await parseJsonBody(request, RolesBodySchema);
 
         const client = await clientPromise;
         const db = client.db();
@@ -39,10 +28,9 @@ export async function POST(request: Request) {
             }
         );
 
-        return NextResponse.json({ success: true });
-    } catch (error: any) {
-        console.error("Role update error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return apiSuccess({ success: true });
+    } catch (error) {
+        return toErrorResponse(error, "Role update failed");
     }
 }
 
@@ -50,7 +38,7 @@ export async function GET() {
     try {
         const session = await getServerSession(authOptions);
         if (!session?.user?.id) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return apiError("Unauthorized", 401, "UNAUTHORIZED");
         }
 
         const client = await clientPromise;
@@ -61,9 +49,8 @@ export async function GET() {
             { projection: { roles: 1 } }
         );
 
-        return NextResponse.json({ roles: user?.roles || [] });
-    } catch (error: any) {
-        console.error("Role fetch error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return apiSuccess({ roles: user?.roles || [] });
+    } catch (error) {
+        return toErrorResponse(error, "Role fetch failed");
     }
 }

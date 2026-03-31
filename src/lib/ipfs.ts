@@ -1,6 +1,7 @@
 // IPFS integration helper
 // For the hackathon, we'll use a simple approach
 // In production, you'd use Pinata, Web3.Storage, or similar
+import { logger } from "@/lib/logger";
 
 export async function uploadToIPFS(data: string): Promise<string> {
   // For demo purposes, we'll create a hash-based identifier
@@ -11,7 +12,7 @@ export async function uploadToIPFS(data: string): Promise<string> {
     const hash = Buffer.from(data).toString('base64').slice(0, 46);
     return `ipfs://${hash}`;
   } catch (error) {
-    console.error('IPFS upload error:', error);
+    logger.error({ err: error }, "ipfs upload error");
     throw new Error('Failed to upload to IPFS');
   }
 }

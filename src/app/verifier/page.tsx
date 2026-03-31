@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { Search, ShieldCheck, ExternalLink, User, AlertCircle, CheckCircle2, X, Loader2, Award, Lock, Wallet, LogOut, ArrowRight, CreditCard, Receipt, History, Calendar } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession, signIn, signOut } from "next-auth/react";
-import { loadStripe } from "@stripe/stripe-js";
 import ScrollReveal from "@/components/ScrollReveal";
 import Certificate from "@/components/Certificate";
 import confetti from "canvas-confetti";
@@ -16,8 +15,6 @@ const LEVEL_COLORS: Record<string, string> = {
     Expert: "bg-zinc-950 text-white border-zinc-900 shadow-2xl",
     Verified: "bg-zinc-50 text-zinc-600 border-zinc-200",
 };
-
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "");
 
 export default function VerifierDashboard() {
     const { data: session } = useSession();
@@ -35,6 +32,22 @@ export default function VerifierDashboard() {
     const [showBilling, setShowBilling] = useState(false);
     const [showBumper, setShowBumper] = useState(false);
 
+    const resolveEntitlement = async (walletAddress?: string | null) => {
+        const query = walletAddress ? `?wallet=${encodeURIComponent(walletAddress)}` : "";
+        const res = await fetch(`/api/verifier/access${query}`, { cache: "no-store" });
+        const payload = await res.json();
+
+        if (!res.ok) {
+            throw new Error(payload?.error?.message || payload?.error || "Failed to resolve entitlement");
+        }
+
+        const entitlement = payload?.data || payload;
+        const allowed = Boolean(entitlement?.allowed);
+        setIsSubscribed(allowed);
+        setIsUnlocked(allowed);
+        return entitlement;
+    };
+
     // Reusable fetch logic for billing history
     const updateBillingHistory = async (address: string) => {
         try {
@@ -43,9 +56,10 @@ export default function VerifierDashboard() {
 
             const dbRes = await fetch("/api/verifier/billing");
             const dbData = await dbRes.json();
+            const billingPayload = dbData?.data || dbData;
 
-            if (dbData.success) {
-                const dbHistory = dbData.history.map((b: any) => ({
+            if (billingPayload.success) {
+                const dbHistory = billingPayload.history.map((b: any) => ({
                     hash: b.txHash || b.stripeSessionId,
                     isStellar: !!b.txHash,
                     date: b.date,
@@ -69,23 +83,11 @@ export default function VerifierDashboard() {
         const tryReconnect = async () => {
             if (session) {
                 try {
-                    const { connectWallet, checkSubscriptionStatus, fetchSubscriptionHistory } = await import("@/lib/stellar");
+                    const { connectWallet } = await import("@/lib/stellar");
                     const address = await connectWallet();
                     if (address) {
                         setWallet(address);
-
-                        // Check MongoDB session first
-                        if ((session?.user as any)?.isSubscribed) {
-                            setIsSubscribed(true);
-                            setIsUnlocked(true);
-                        } else {
-                            // Fallback to on-chain check
-                            const sub = await checkSubscriptionStatus(address);
-                            if (sub.active) {
-                                setIsSubscribed(true);
-                                setIsUnlocked(true);
-                            }
-                        }
+                        await resolveEntitlement(address);
                         // Fetch all history (MongoDB + Stellar)
                         await updateBillingHistory(address);
                     }
@@ -102,19 +104,18 @@ export default function VerifierDashboard() {
         const checkPayment = async () => {
             const params = new URLSearchParams(window.location.search);
             const sessionId = params.get("session_id");
-            const subscribed = params.get("subscribed");
             const savedSearch = localStorage.getItem("last_verifier_search");
 
-            if (sessionId && subscribed === "true") {
+            if (sessionId) {
                 if (!wallet) return;
                 setLoading(true);
                 try {
                     const verifyRes = await fetch(`/api/stripe/verify?session_id=${sessionId}`);
                     const verifyData = await verifyRes.json();
+                    const verifyPayload = verifyData?.data || verifyData;
 
-                    if (verifyData.success) {
-                        setIsSubscribed(true);
-                        setIsUnlocked(true);
+                    if (verifyPayload.success && verifyPayload.granted) {
+                        await resolveEntitlement(wallet);
 
                         // Record subscription on Stellar
                         try {
@@ -128,7 +129,8 @@ export default function VerifierDashboard() {
                                     headers: { "Content-Type": "application/json" },
                                     body: JSON.stringify({
                                         sessionId: sessionId,
-                                        txHash: onChainResult.hash
+                                        txHash: onChainResult.hash,
+                                        wallet,
                                     })
                                 });
                             }
@@ -156,7 +158,7 @@ export default function VerifierDashboard() {
                         setShowBumper(true);
                         setTimeout(() => setShowBumper(false), 4000);
                     } else {
-                        setError("Stripe verification failed.");
+                        setError(verifyData?.error?.message || verifyData?.error || "Stripe verification failed.");
                     }
                 } catch (e: any) {
                     console.error("Post-payment error:", e);
@@ -189,9 +191,7 @@ export default function VerifierDashboard() {
             localStorage.setItem("last_verifier_search", search.trim());
 
             // If already subscribed, unlock automatically
-            if (isSubscribed) {
-                setIsUnlocked(true);
-            }
+            await resolveEntitlement(wallet);
         } catch (e: any) {
             console.error(e);
             setError(e.message || "Failed to verify wallet. Please check the address format.");
@@ -217,9 +217,13 @@ export default function VerifierDashboard() {
                 }),
             });
 
-            const { id, url, error: stripeError } = await response.json();
+            const checkoutData = await response.json();
+            const checkoutPayload = checkoutData?.data || checkoutData;
+            const stripeError = checkoutData?.error?.message || checkoutData?.error;
+            const url = checkoutPayload?.url;
 
             if (stripeError) throw new Error(stripeError);
+            if (!url) throw new Error("Stripe checkout URL missing");
 
             // Redirect to Stripe Checkout
             window.location.href = url;
