@@ -53,6 +53,22 @@ pub struct Attestation {
 }
 
 #[contracttype]
+#[derive(Clone)]
+pub struct AttestationSubmission {
+    pub attestation_id: BytesN<32>,
+    pub user: Address,
+    pub signer: BytesN<32>,
+    pub artifact_hash: BytesN<32>,
+    pub repository_snapshot_hash: BytesN<32>,
+    pub rubric_version: Bytes,
+    pub prompt_version: Bytes,
+    pub model_id: Bytes,
+    pub score: u32,
+    pub artifact_uri: Bytes,
+    pub signature: BytesN<64>,
+}
+
+#[contracttype]
 pub enum DataKey {
     Admin,
     Evaluator(BytesN<32>),
@@ -117,26 +133,12 @@ impl EduProofContract {
         Ok(())
     }
 
-    #[allow(clippy::too_many_arguments)]
-    pub fn submit_attestation(
-        env: Env,
-        attestation_id: BytesN<32>,
-        user: Address,
-        signer: BytesN<32>,
-        artifact_hash: BytesN<32>,
-        repository_snapshot_hash: BytesN<32>,
-        rubric_version: Bytes,
-        prompt_version: Bytes,
-        model_id: Bytes,
-        score: u32,
-        artifact_uri: Bytes,
-        signature: BytesN<64>,
-    ) -> Result<(), EduProofError> {
-        if score > 100 {
+    pub fn submit_attestation(env: Env, submission: AttestationSubmission) -> Result<(), EduProofError> {
+        if submission.score > 100 {
             return Err(EduProofError::InvalidScore);
         }
 
-        let evaluator_key = DataKey::Evaluator(signer.clone());
+        let evaluator_key = DataKey::Evaluator(submission.signer.clone());
         let evaluator: Evaluator = env
             .storage()
             .persistent()
@@ -146,54 +148,54 @@ impl EduProofContract {
             return Err(EduProofError::EvaluatorRevoked);
         }
 
-        let attestation_key = DataKey::Attestation(attestation_id.clone());
+        let attestation_key = DataKey::Attestation(submission.attestation_id.clone());
         if env.storage().persistent().has(&attestation_key) {
             return Err(EduProofError::AlreadyExists);
         }
 
         let mut signed_message = Bytes::new(&env);
-        signed_message.append(&Bytes::from_array(&env, &artifact_hash.to_array()));
+        signed_message.append(&Bytes::from_array(&env, &submission.artifact_hash.to_array()));
         env.crypto()
-            .ed25519_verify(&signer, &signed_message, &signature);
+            .ed25519_verify(&submission.signer, &signed_message, &submission.signature);
 
-        let artifact_key = DataKey::Artifact(artifact_hash.clone());
+        let artifact_key = DataKey::Artifact(submission.artifact_hash.clone());
         let artifact = EvaluationArtifact {
-            artifact_hash: artifact_hash.clone(),
-            repository_snapshot_hash,
-            rubric_version: rubric_version.clone(),
-            prompt_version,
-            model_id: model_id.clone(),
-            score,
-            artifact_uri,
+            artifact_hash: submission.artifact_hash.clone(),
+            repository_snapshot_hash: submission.repository_snapshot_hash,
+            rubric_version: submission.rubric_version.clone(),
+            prompt_version: submission.prompt_version,
+            model_id: submission.model_id.clone(),
+            score: submission.score,
+            artifact_uri: submission.artifact_uri,
             created_at: env.ledger().timestamp(),
         };
         env.storage().persistent().set(&artifact_key, &artifact);
 
         let attestation = Attestation {
-            attestation_id: attestation_id.clone(),
-            user: user.clone(),
-            signer: signer.clone(),
-            artifact_hash: artifact_hash.clone(),
-            rubric_version,
-            model_id,
-            signature,
+            attestation_id: submission.attestation_id.clone(),
+            user: submission.user.clone(),
+            signer: submission.signer.clone(),
+            artifact_hash: submission.artifact_hash.clone(),
+            rubric_version: submission.rubric_version,
+            model_id: submission.model_id,
+            signature: submission.signature,
             created_at: env.ledger().timestamp(),
             revoked: false,
         };
         env.storage().persistent().set(&attestation_key, &attestation);
 
-        let user_key = DataKey::UserAttestations(user.clone());
+        let user_key = DataKey::UserAttestations(submission.user.clone());
         let mut attestation_ids: Vec<BytesN<32>> = env
             .storage()
             .persistent()
             .get(&user_key)
             .unwrap_or(Vec::new(&env));
-        attestation_ids.push_back(attestation_id.clone());
+        attestation_ids.push_back(submission.attestation_id.clone());
         env.storage().persistent().set(&user_key, &attestation_ids);
 
         env.events().publish(
-            (Symbol::new(&env, "attestation_submitted"), user),
-            attestation_id,
+            (Symbol::new(&env, "attestation_submitted"), submission.user),
+            submission.attestation_id,
         );
         Ok(())
     }
@@ -309,4 +311,3 @@ mod tests {
         }
     }
 }
-

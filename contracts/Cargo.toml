@@ -6,6 +6,10 @@ edition = "2021"
 [lib]
 crate-type = ["cdylib"]
 
+[features]
+default = []
+testutils = []
+
 [dependencies]
 soroban-sdk = "20.0.0"
 
